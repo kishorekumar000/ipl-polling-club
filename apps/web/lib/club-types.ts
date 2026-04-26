@@ -1,0 +1,132 @@
+export type UserRole = "user" | "admin";
+export type AdminLevel = "super" | "standard";
+
+export type TeamCode =
+  | "CSK"
+  | "DC"
+  | "GT"
+  | "KKR"
+  | "LSG"
+  | "MI"
+  | "PBKS"
+  | "RCB"
+  | "RR"
+  | "SRH";
+
+export type ClubTeam = {
+  code: TeamCode;
+  name: string;
+  shortName: string;
+  nickname: string;
+  symbol: string;
+  logoPath?: string;
+  primary: string;
+  secondary: string;
+  accent: string;
+};
+
+export type ClubUser = {
+  id: string;
+  publicId: string;
+  name: string;
+  normalizedName: string;
+  role: UserRole;
+  adminLevel?: AdminLevel;
+  password?: string;
+  favoriteTeamCode?: TeamCode;
+  renameCount: number;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type MatchRecord = {
+  id: string;
+  dayKey: string;
+  title: string;
+  subtitle: string;
+  venue: string;
+  matchNumber: number;
+  homeTeamCode: TeamCode;
+  awayTeamCode: TeamCode;
+  startsAt: string;
+  pollOpenAt: string;
+  pollLockAt: string;
+  sourceLabel?: string;
+  sourceUrl?: string;
+  winnerTeamCode?: TeamCode;
+  resultDeclaredAt?: string;
+  resultDeclaredBy?: string;
+};
+
+export type VoteRecord = {
+  id: string;
+  userId: string;
+  matchId: string;
+  teamCode: TeamCode;
+  updatedAt: string;
+};
+
+export type SettlementEntry = {
+  userId: string;
+  userName: string;
+  teamCode: TeamCode;
+  amount: number;
+  kind: "win" | "loss";
+};
+
+export type SettlementRecord = {
+  matchId: string;
+  matchTitle: string;
+  winnerTeamCode: TeamCode;
+  carryIn: number;
+  totalPool: number;
+  loserCount: number;
+  winnerCount: number;
+  sharePerWinner: number;
+  remainder: number;
+  publishedAt: string;
+  entries: SettlementEntry[];
+};
+
+export type AuditEvent = {
+  id: string;
+  type: string;
+  actorName: string;
+  detail: string;
+  createdAt: string;
+};
+
+export type AppNotificationKind =
+  | "system"
+  | "poll-open"
+  | "poll-closing"
+  | "poll-locked"
+  | "vote"
+  | "result"
+  | "admin"
+  | "profile";
+
+export type AppNotification = {
+  id: string;
+  title: string;
+  body: string;
+  createdAt: string;
+  read: boolean;
+  kind: AppNotificationKind;
+  url?: string;
+ };
+
+export type AppState = {
+  users: ClubUser[];
+  matches: MatchRecord[];
+  votes: VoteRecord[];
+  settlements: SettlementRecord[];
+  carryBalance: number;
+  auditTrail: AuditEvent[];
+  appNotifications: AppNotification[];
+};
+
+export type Session = {
+  userId: string;
+  role: UserRole;
+};

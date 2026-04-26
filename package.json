@@ -1,0 +1,16 @@
+{
+  "name": "ipl-betting",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Private IPL match polling platform with virtual settlement tracking",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev:web": "npm run dev --workspace @ipl/web",
+    "dev:api": "npm run dev --workspace @ipl/api",
+    "db:generate": "npm run prisma:generate --workspace @ipl/db",
+    "db:migrate": "npm run prisma:migrate --workspace @ipl/db"
+  }
+}

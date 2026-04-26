@@ -1,0 +1,146 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  USER
+  ADMIN
+}
+
+enum MatchStatus {
+  SCHEDULED
+  POLL_OPEN
+  POLL_LOCKED
+  RESULT_DECLARED
+  SETTLED
+  CANCELED
+}
+
+enum VoteStatus {
+  ACTIVE
+  REPLACED
+  REMOVED
+}
+
+enum EntryKind {
+  WIN
+  LOSS
+  CARRY_FORWARD
+  ADJUSTMENT
+}
+
+model User {
+  id                     String        @id @default(cuid())
+  name                   String
+  normalizedName         String        @unique
+  role                   UserRole      @default(USER)
+  favoriteTeamId         String?
+  renameCount            Int           @default(0)
+  favoriteLockedAt       DateTime?
+  isActive               Boolean       @default(true)
+  createdAt              DateTime      @default(now())
+  updatedAt              DateTime      @updatedAt
+  favoriteTeam           Team?         @relation(fields: [favoriteTeamId], references: [id])
+  votes                  Vote[]
+  settlementEntries      SettlementEntry[]
+
+  @@index([favoriteTeamId])
+}
+
+model Team {
+  id              String    @id @default(cuid())
+  code            String    @unique
+  name            String    @unique
+  shortName       String    @unique
+  primaryColor    String
+  secondaryColor  String?
+  logoUrl         String?
+  users           User[]
+  homeMatches     Match[]   @relation("HomeTeam")
+  awayMatches     Match[]   @relation("AwayTeam")
+  winningMatches  Match[]   @relation("WinningTeam")
+}
+
+model Match {
+  id                    String         @id @default(cuid())
+  externalMatchId       String?        @unique
+  title                 String
+  generatedSubtitle     String?
+  homeTeamId            String
+  awayTeamId            String
+  winningTeamId         String?
+  status                MatchStatus    @default(SCHEDULED)
+  matchDate             DateTime
+  pollOpenAt            DateTime
+  pollLockAt            DateTime
+  resultDeclaredAt      DateTime?
+  settledAt             DateTime?
+  carryInPaise          Int            @default(0)
+  carryOutPaise         Int            @default(0)
+  createdAt             DateTime       @default(now())
+  updatedAt             DateTime       @updatedAt
+  homeTeam              Team           @relation("HomeTeam", fields: [homeTeamId], references: [id])
+  awayTeam              Team           @relation("AwayTeam", fields: [awayTeamId], references: [id])
+  winningTeam           Team?          @relation("WinningTeam", fields: [winningTeamId], references: [id])
+  votes                 Vote[]
+  settlement            Settlement?
+
+  @@index([matchDate])
+  @@index([status])
+  @@index([pollOpenAt, pollLockAt])
+}
+
+model Vote {
+  id              String      @id @default(cuid())
+  userId          String
+  matchId         String
+  teamId          String
+  status          VoteStatus  @default(ACTIVE)
+  selectedAt      DateTime    @default(now())
+  replacedAt      DateTime?
+  updatedAt       DateTime    @updatedAt
+  user            User        @relation(fields: [userId], references: [id])
+  match           Match       @relation(fields: [matchId], references: [id])
+  team            Team        @relation(fields: [teamId], references: [id])
+
+  @@index([matchId, status])
+  @@index([userId, matchId, status])
+}
+
+model Settlement {
+  id                    String             @id @default(cuid())
+  matchId               String             @unique
+  losersCount           Int
+  winnersCount          Int
+  loserContribution     Int                @default(500)
+  carryInPaise          Int                @default(0)
+  poolPaise             Int
+  sharePerWinnerPaise   Int
+  remainderPaise        Int
+  generatedAt           DateTime           @default(now())
+  editedByAdminId       String?
+  match                 Match              @relation(fields: [matchId], references: [id])
+  entries               SettlementEntry[]
+}
+
+model SettlementEntry {
+  id                 String     @id @default(cuid())
+  settlementId       String
+  userId             String?
+  teamId             String?
+  amountPaise        Int
+  kind               EntryKind
+  note               String?
+  createdAt          DateTime   @default(now())
+  settlement         Settlement @relation(fields: [settlementId], references: [id])
+  user               User?      @relation(fields: [userId], references: [id])
+  team               Team?      @relation(fields: [teamId], references: [id])
+
+  @@index([settlementId, kind])
+  @@index([userId])
+}

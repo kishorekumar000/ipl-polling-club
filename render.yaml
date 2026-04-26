@@ -1,0 +1,35 @@
+services:
+  - type: web
+    name: ipl-api
+    runtime: node
+    plan: starter
+    region: singapore
+    buildCommand: npm install && npm run build --workspace @ipl/api
+    startCommand: npm run start --workspace @ipl/api
+    healthCheckPath: /health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 4000
+    disk:
+      name: shared-state
+      mountPath: /opt/render/project/src/data
+      sizeGB: 1
+
+  - type: web
+    name: ipl-web
+    runtime: node
+    plan: starter
+    region: singapore
+    buildCommand: npm install && npm run build --workspace @ipl/web
+    startCommand: cd apps/web && npx next start -H 0.0.0.0 -p $PORT
+    healthCheckPath: /
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: API_SERVICE_URL
+        fromService:
+          type: web
+          name: ipl-api
+          property: hostport

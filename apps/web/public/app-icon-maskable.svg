@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <rect width="512" height="512" fill="#07162a"/>
+  <rect x="48" y="48" width="416" height="416" rx="104" fill="#0b213d"/>
+  <circle cx="256" cy="188" r="108" fill="none" stroke="#ffcb47" stroke-width="24"/>
+  <path d="M180 286h152l-24 56H204z" fill="#ff9447"/>
+  <path d="M246 138h20v134h-20z" fill="#f5f7fb"/>
+  <path d="M204 188h104v20H204z" fill="#f5f7fb"/>
+  <text x="256" y="408" text-anchor="middle" fill="#f5f7fb" font-size="72" font-family="Segoe UI, Arial, sans-serif" font-weight="800">IPL</text>
+</svg>

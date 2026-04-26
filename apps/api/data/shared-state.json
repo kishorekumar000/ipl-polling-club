@@ -1,0 +1,40 @@
+{
+  "users": [],
+  "matches": [
+    {
+      "id": "2026-04-26-gt-csk",
+      "dayKey": "2026-04-26",
+      "title": "GT vs CSK Showdown",
+      "subtitle": "GT vs CSK at ",
+      "venue": "",
+      "matchNumber": 37,
+      "homeTeamCode": "GT",
+      "awayTeamCode": "CSK",
+      "startsAt": "2026-04-26T15:30:00+05:30",
+      "pollOpenAt": "2026-04-26T12:00:00+05:30",
+      "pollLockAt": "2026-04-26T15:30:00+05:30",
+      "sourceLabel": "ScheduleFixtures IPL 2026",
+      "sourceUrl": "https://www.schedulefixtures.com/series/ipl-2026/511/schedule-fixtures"
+    },
+    {
+      "id": "2026-04-26-lsg-kkr",
+      "dayKey": "2026-04-26",
+      "title": "LSG vs KKR Showdown",
+      "subtitle": "LSG vs KKR at ",
+      "venue": "",
+      "matchNumber": 38,
+      "homeTeamCode": "LSG",
+      "awayTeamCode": "KKR",
+      "startsAt": "2026-04-26T19:30:00+05:30",
+      "pollOpenAt": "2026-04-26T16:00:00+05:30",
+      "pollLockAt": "2026-04-26T19:30:00+05:30",
+      "sourceLabel": "ScheduleFixtures IPL 2026",
+      "sourceUrl": "https://www.schedulefixtures.com/series/ipl-2026/511/schedule-fixtures"
+    }
+  ],
+  "votes": [],
+  "settlements": [],
+  "carryBalance": 0,
+  "auditTrail": [],
+  "appNotifications": []
+}
