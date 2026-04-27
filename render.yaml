@@ -12,6 +12,8 @@ services:
         value: production
       - key: PORT
         value: 4000
+      - key: STATE_STORAGE_DIR
+        value: /opt/render/project/src/data
     disk:
       name: shared-state
       mountPath: /opt/render/project/src/data

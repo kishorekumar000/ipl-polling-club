@@ -10,6 +10,10 @@
   "scripts": {
     "dev:web": "npm run dev --workspace @ipl/web",
     "dev:api": "npm run dev --workspace @ipl/api",
+    "build:web": "npm run build --workspace @ipl/web",
+    "build:api": "npm run build --workspace @ipl/api",
+    "start:web": "npm run start --workspace @ipl/web",
+    "start:api": "npm run start --workspace @ipl/api",
     "db:generate": "npm run prisma:generate --workspace @ipl/db",
     "db:migrate": "npm run prisma:migrate --workspace @ipl/db"
   }

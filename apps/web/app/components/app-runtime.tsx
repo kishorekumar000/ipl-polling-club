@@ -6,11 +6,6 @@ import { useClubStore } from "../../lib/club-state";
 import { useDailyMatches } from "../../lib/use-daily-matches";
 import { AppNotification, AuditEvent } from "../../lib/club-types";
 
-type InstallPromptEvent = Event & {
-  prompt: () => Promise<void>;
-  userChoice: Promise<{ outcome: "accepted" | "dismissed"; platform: string }>;
-};
-
 const SCHEDULED_NOTIFICATION_KEY = "ipl-club-notified-scheduled";
 
 function readScheduledNotifications() {
@@ -106,7 +101,6 @@ export function AppRuntime() {
   const { ready, state, updateState } = useClubStore();
   const { todayMatches } = useDailyMatches();
   const [permission, setPermission] = useState<NotificationPermission>("default");
-  const [installPrompt, setInstallPrompt] = useState<InstallPromptEvent | null>(null);
   const scheduledTimeouts = useRef<number[]>([]);
   const processedAuditIds = useRef<Set<string>>(new Set());
   const scheduledKeys = useRef<Set<string>>(new Set());
@@ -164,15 +158,7 @@ export function AppRuntime() {
       void navigator.serviceWorker.register("/sw.js");
     }
 
-    const handleBeforeInstallPrompt = (event: Event) => {
-      event.preventDefault();
-      setInstallPrompt(event as InstallPromptEvent);
-    };
-
-    window.addEventListener("beforeinstallprompt", handleBeforeInstallPrompt);
-
     return () => {
-      window.removeEventListener("beforeinstallprompt", handleBeforeInstallPrompt);
       scheduledTimeouts.current.forEach((timeoutId) => window.clearTimeout(timeoutId));
       scheduledTimeouts.current = [];
     };
@@ -327,17 +313,7 @@ export function AppRuntime() {
     }
   };
 
-  const installApp = async () => {
-    if (!installPrompt) {
-      return;
-    }
-
-    await installPrompt.prompt();
-    await installPrompt.userChoice;
-    setInstallPrompt(null);
-  };
-
-  if (permission === "granted" && !installPrompt) {
+  if (permission === "granted") {
     return null;
   }
 
@@ -345,31 +321,21 @@ export function AppRuntime() {
     <div className="runtime-banner-shell">
       <div className="runtime-banner">
         <div>
-          <strong>Install the IPL app experience</strong>
+          <strong>Turn on website alerts</strong>
           <p>
-            Allow notifications for poll openings, vote deadlines, results, and
-            club activity. Your unread alerts are tracked inside the app too.
+            Allow browser notifications for poll openings, vote deadlines,
+            results, and club activity. Your unread alerts are still tracked
+            inside the website header too.
           </p>
         </div>
         <div className="hero-actions runtime-actions">
-          {permission !== "granted" ? (
-            <button
-              className="primary-link button-link"
-              onClick={requestNotifications}
-              type="button"
-            >
-              Allow notifications
-            </button>
-          ) : null}
-          {installPrompt ? (
-            <button
-              className="secondary-link button-link"
-              onClick={installApp}
-              type="button"
-            >
-              Install app
-            </button>
-          ) : null}
+          <button
+            className="primary-link button-link"
+            onClick={requestNotifications}
+            type="button"
+          >
+            Allow browser alerts
+          </button>
         </div>
       </div>
     </div>

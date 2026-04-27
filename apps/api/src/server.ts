@@ -6,7 +6,10 @@ import path from "node:path";
 
 const app = express();
 const port = Number(process.env.PORT || 4000);
-const dataDirectory = path.join(process.cwd(), "data");
+const configuredDataDirectory = process.env.STATE_STORAGE_DIR?.trim();
+const dataDirectory = configuredDataDirectory
+  ? path.resolve(configuredDataDirectory)
+  : path.join(process.cwd(), "data");
 const stateFile = path.join(dataDirectory, "shared-state.json");
 
 app.use(cors());
@@ -76,7 +79,8 @@ app.get("/health", (_req, res) => {
   res.json({
     ok: true,
     service: "ipl-api",
-    message: "API scaffold is ready for auth, matches, voting, and settlements."
+    storagePath: stateFile,
+    message: "Shared website API is ready for users, votes, and settlements."
   });
 });
 

@@ -1,5 +1,19 @@
 {
-  "users": [],
+  "users": [
+    {
+      "id": "admin-1777232312079",
+      "publicId": "ADM-001",
+      "name": "kishorekumar",
+      "normalizedName": "kishorekumar",
+      "role": "admin",
+      "adminLevel": "super",
+      "password": "Kishore001@",
+      "favoriteTeamCode": "RCB",
+      "renameCount": 0,
+      "createdAt": "2026-04-26T19:38:32.075Z",
+      "updatedAt": "2026-04-26T19:38:32.075Z"
+    }
+  ],
   "matches": [
     {
       "id": "2026-04-26-gt-csk",
@@ -30,11 +44,62 @@
       "pollLockAt": "2026-04-26T19:30:00+05:30",
       "sourceLabel": "ScheduleFixtures IPL 2026",
       "sourceUrl": "https://www.schedulefixtures.com/series/ipl-2026/511/schedule-fixtures"
+    },
+    {
+      "id": "2026-04-27-dc-rcb",
+      "dayKey": "2026-04-27",
+      "title": "DC vs RCB Showdown",
+      "subtitle": "DC vs RCB at ",
+      "venue": "",
+      "matchNumber": 39,
+      "homeTeamCode": "DC",
+      "awayTeamCode": "RCB",
+      "startsAt": "2026-04-27T19:30:00+05:30",
+      "pollOpenAt": "2026-04-27T15:00:00+05:30",
+      "pollLockAt": "2026-04-27T19:30:00+05:30",
+      "sourceLabel": "ScheduleFixtures IPL 2026",
+      "sourceUrl": "https://www.schedulefixtures.com/series/ipl-2026/511/schedule-fixtures"
     }
   ],
   "votes": [],
   "settlements": [],
   "carryBalance": 0,
-  "auditTrail": [],
-  "appNotifications": []
+  "auditTrail": [
+    {
+      "id": "audit-1777232312081",
+      "type": "admin-setup",
+      "actorName": "kishorekumar",
+      "detail": "Created the super admin profile ADM-001 with fixed password Kishore001@.",
+      "createdAt": "2026-04-26T19:38:32.075Z"
+    }
+  ],
+  "appNotifications": [
+    {
+      "id": "audit-note-audit-1777232312081",
+      "createdAt": "2026-04-26T19:38:32.075Z",
+      "kind": "admin",
+      "title": "Admin update",
+      "body": "Created the super admin profile ADM-001 with fixed password Kishore001@.",
+      "url": "/admin",
+      "read": false
+    },
+    {
+      "id": "scheduled-2026-04-26-lsg-kkr-open",
+      "title": "Poll is now open",
+      "body": "LSG vs KKR Showdown is live. Place or change your vote before the lock time.",
+      "kind": "poll-open",
+      "url": "/polls/today",
+      "createdAt": "2026-04-26T13:20:41.076Z",
+      "read": false
+    },
+    {
+      "id": "scheduled-2026-04-26-gt-csk-locked",
+      "title": "Voting locked",
+      "body": "GT vs CSK Showdown is now locked. Final team lists are ready.",
+      "kind": "poll-locked",
+      "url": "/polls/today",
+      "createdAt": "2026-04-26T13:20:41.074Z",
+      "read": false
+    }
+  ]
 }
