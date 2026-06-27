@@ -83,8 +83,8 @@ export default function TeamSetupPage() {
             <p className="eyebrow">Favorite team setup</p>
             <h1>Choose one team for your full experience.</h1>
             <p className="support-copy">
-              Once you choose, the team theme stays locked forever and will tint
-              your pages.
+              Once you choose, the IPL team theme stays locked forever and will
+              tint both IPL and FIFA pages for this profile.
             </p>
           </div>
           {lockedTeam ? <TeamBrandBadge team={lockedTeam} /> : null}

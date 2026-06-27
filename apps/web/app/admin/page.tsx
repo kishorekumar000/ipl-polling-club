@@ -2,7 +2,13 @@
 
 import Link from "next/link";
 import { FormEvent, useMemo, useState } from "react";
-import { IPL_TEAMS, countUsersByRole, getTeam } from "../../lib/club-data";
+import {
+  countUsersByRole,
+  getCarryBalance,
+  getTeam,
+  getTournament,
+  IPL_TEAMS
+} from "../../lib/club-data";
 import {
   createPublicId,
   formatAmount,
@@ -20,13 +26,21 @@ import { TeamBrandBadge } from "../components/team-brand-badge";
 const SUPER_ADMIN_PASSWORD = "Kishore001@";
 
 export default function AdminPage() {
-  const { ready, session, state, updateState, setSession } = useClubStore();
-  const { todayMatches, loading, error } = useDailyMatches();
+  const {
+    ready,
+    session,
+    state,
+    currentTournament,
+    updateState,
+    setSession
+  } = useClubStore();
+  const { todayMatches, loading, error } = useDailyMatches(currentTournament);
   const [adminName, setAdminName] = useState("");
   const [favoriteTeamCode, setFavoriteTeamCode] = useState<TeamCode | null>(null);
   const [loginName, setLoginName] = useState("");
   const [loginPassword, setLoginPassword] = useState("");
   const [formError, setFormError] = useState("");
+  const tournament = getTournament(currentTournament);
   const adminProfiles = state.users.filter((user) => user.role === "admin");
   const adminUser = state.users.find((user) => user.id === session?.userId);
   const adminFavoriteTeam =
@@ -39,9 +53,9 @@ export default function AdminPage() {
       admins: countUsersByRole(state, "admin"),
       profiles: state.users.length,
       votes: state.votes.length,
-      carry: state.carryBalance
+      carry: getCarryBalance(state, currentTournament)
     }),
-    [state]
+    [currentTournament, state]
   );
 
   const handleAdminRoleChange = (targetUserId: string, nextRole: UserRole) => {
@@ -219,7 +233,7 @@ export default function AdminPage() {
             <h1>Create your own admin profile.</h1>
             <p className="support-copy">
               The first admin becomes the super admin with full control. That
-              account can also vote as a participant in match polls. The super
+              account can also vote as a participant in both tournament poll rooms. The super
               admin password is fixed as {SUPER_ADMIN_PASSWORD}.
             </p>
           </div>
@@ -346,7 +360,7 @@ export default function AdminPage() {
             <h1>Control the league and still vote as a participant.</h1>
             <p className="support-copy">
               {isSuperAdmin
-                ? "You are the super admin, so you can edit the league and choose supporting admins."
+                ? "You are the super admin, so you can edit the active tournament and choose supporting admins."
                 : "You are a supporting admin. You can access the admin area and join polls, but final control stays with the super admin."}
             </p>
           </div>
@@ -366,8 +380,8 @@ export default function AdminPage() {
             <strong>{adminUser.publicId}</strong>
           </div>
           <div className="profile-chip">
-            <span>Total profiles</span>
-            <strong>{metrics.profiles}</strong>
+            <span>Active tournament</span>
+            <strong>{tournament?.shortName}</strong>
           </div>
         </div>
       </section>
@@ -393,7 +407,7 @@ export default function AdminPage() {
             <p className="support-copy">{metrics.admins}</p>
           </div>
           <div className="feature-card">
-            <strong>Carry balance</strong>
+            <strong>{tournament?.shortName} carry balance</strong>
             <p className="support-copy">Rs {metrics.carry}</p>
           </div>
           <div className="feature-card">
@@ -419,7 +433,7 @@ export default function AdminPage() {
             <article className="panel-card" key={match.id}>
               <div className="match-heading">
                 <div>
-                  <p className="eyebrow">Today&apos;s match control</p>
+                  <p className="eyebrow">Today&apos;s {tournament?.shortName} match control</p>
                   <h2>{match.title}</h2>
                   <p className="support-copy">
                     {match.subtitle} | Opens {formatClock(match.pollOpenAt)} | Locks{" "}
@@ -479,7 +493,7 @@ export default function AdminPage() {
               ) : (
                 <p className="support-copy">
                   {isSuperAdmin
-                    ? "Winner not declared yet, so the settlement board is still waiting."
+                    ? `Winner not declared yet, so the ${tournament?.shortName} settlement board is still waiting.`
                     : "Winner not declared yet. Only the super admin can publish the final result."}
                 </p>
               )}

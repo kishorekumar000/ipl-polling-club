@@ -3,10 +3,11 @@
 import { useEffect, useState } from "react";
 import { createEmptyState } from "./club-data";
 import { recomputeSettlements } from "./club-logic";
-import { AppState, ClubUser, Session } from "./club-types";
+import { AppState, ClubUser, Session, TournamentCode } from "./club-types";
 
-const STATE_KEY = "ipl-club-state-v3";
+const STATE_KEY = "ipl-club-state-v4";
 const SESSION_KEY = "ipl-club-session-v3";
+const TOURNAMENT_KEY = "ipl-club-tournament-v1";
 const SHARED_STATE_ENDPOINT = "/api/shared-state";
 
 function normalizeUsers(users: ClubUser[]): ClubUser[] {
@@ -35,6 +36,18 @@ function normalizeState(state: AppState) {
   return {
     ...state,
     users: normalizeUsers(state.users),
+    matches: state.matches.map((match) => ({
+      ...match,
+      tournamentCode: match.tournamentCode ?? "IPL"
+    })),
+    settlements: state.settlements.map((settlement) => ({
+      ...settlement,
+      tournamentCode: settlement.tournamentCode ?? "IPL"
+    })),
+    carryBalances: {
+      IPL: state.carryBalances?.IPL ?? (state as AppState & { carryBalance?: number }).carryBalance ?? 0,
+      FIFA: state.carryBalances?.FIFA ?? 0
+    },
     appNotifications: state.appNotifications ?? []
   };
 }
@@ -122,17 +135,35 @@ function readSession() {
   }
 }
 
+function readTournamentPreference() {
+  if (typeof window === "undefined") {
+    return "IPL" satisfies TournamentCode;
+  }
+
+  const raw = window.localStorage.getItem(TOURNAMENT_KEY);
+
+  if (raw === "IPL" || raw === "FIFA") {
+    return raw;
+  }
+
+  return "IPL" satisfies TournamentCode;
+}
+
 export function useClubStore() {
   const [state, setState] = useState<AppState>(createEmptyState());
   const [session, setSessionState] = useState<Session | null>(null);
+  const [currentTournament, setCurrentTournamentState] =
+    useState<TournamentCode>("IPL");
   const [ready, setReady] = useState(false);
 
   useEffect(() => {
     const nextState = readState();
     const nextSession = readSession();
+    const nextTournament = readTournamentPreference();
 
     setState(nextState);
     setSessionState(nextSession);
+    setCurrentTournamentState(nextTournament);
     setReady(true);
 
     void fetchRemoteState().then((remoteState) => {
@@ -207,11 +238,23 @@ export function useClubStore() {
     window.localStorage.setItem(SESSION_KEY, JSON.stringify(nextSession));
   };
 
+  const setCurrentTournament = (nextTournament: TournamentCode) => {
+    setCurrentTournamentState(nextTournament);
+
+    if (typeof window === "undefined") {
+      return;
+    }
+
+    window.localStorage.setItem(TOURNAMENT_KEY, nextTournament);
+  };
+
   return {
     state,
     session,
+    currentTournament,
     ready,
     updateState,
-    setSession
+    setSession,
+    setCurrentTournament
   };
 }

@@ -21,7 +21,10 @@ function createEmptyState() {
     matches: [],
     votes: [],
     settlements: [],
-    carryBalance: 0,
+    carryBalances: {
+      IPL: 0,
+      FIFA: 0
+    },
     auditTrail: [],
     appNotifications: []
   };
@@ -36,11 +39,50 @@ function normalizeState(payload: unknown) {
 
   return {
     users: Array.isArray(candidate.users) ? candidate.users : [],
-    matches: Array.isArray(candidate.matches) ? candidate.matches : [],
+    matches: Array.isArray(candidate.matches)
+      ? candidate.matches.map((match) =>
+          match && typeof match === "object"
+            ? {
+                ...match,
+                tournamentCode:
+                  (match as { tournamentCode?: string }).tournamentCode ?? "IPL"
+              }
+            : match
+        )
+      : [],
     votes: Array.isArray(candidate.votes) ? candidate.votes : [],
-    settlements: Array.isArray(candidate.settlements) ? candidate.settlements : [],
-    carryBalance:
-      typeof candidate.carryBalance === "number" ? candidate.carryBalance : 0,
+    settlements: Array.isArray(candidate.settlements)
+      ? candidate.settlements.map((settlement) =>
+          settlement && typeof settlement === "object"
+            ? {
+                ...settlement,
+                tournamentCode:
+                  (settlement as { tournamentCode?: string }).tournamentCode ??
+                  "IPL"
+              }
+            : settlement
+        )
+      : [],
+    carryBalances:
+      candidate.carryBalances && typeof candidate.carryBalances === "object"
+        ? {
+            IPL:
+              typeof (candidate.carryBalances as Record<string, unknown>).IPL ===
+              "number"
+                ? ((candidate.carryBalances as Record<string, unknown>).IPL as number)
+                : typeof candidate.carryBalance === "number"
+                  ? candidate.carryBalance
+                  : 0,
+            FIFA:
+              typeof (candidate.carryBalances as Record<string, unknown>).FIFA ===
+              "number"
+                ? ((candidate.carryBalances as Record<string, unknown>).FIFA as number)
+                : 0
+          }
+        : {
+            IPL: typeof candidate.carryBalance === "number" ? candidate.carryBalance : 0,
+            FIFA: 0
+          },
     auditTrail: Array.isArray(candidate.auditTrail) ? candidate.auditTrail : [],
     appNotifications: Array.isArray(candidate.appNotifications)
       ? candidate.appNotifications

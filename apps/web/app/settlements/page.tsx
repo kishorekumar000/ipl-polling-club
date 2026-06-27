@@ -1,17 +1,20 @@
 "use client";
 
-import { getTeam } from "../../lib/club-data";
+import { getCarryBalance, getTeam, getTournament } from "../../lib/club-data";
 import { formatAmount } from "../../lib/club-logic";
 import { useClubStore } from "../../lib/club-state";
 
 export default function SettlementsPage() {
-  const { ready, state } = useClubStore();
+  const { ready, state, currentTournament } = useClubStore();
 
   if (!ready) {
     return <main className="page-shell">Loading settlements...</main>;
   }
 
-  const settlements = [...state.settlements].sort(
+  const tournament = getTournament(currentTournament);
+  const settlements = state.settlements
+    .filter((item) => item.tournamentCode === currentTournament)
+    .sort(
     (left, right) =>
       new Date(right.publishedAt).getTime() - new Date(left.publishedAt).getTime()
   );
@@ -22,10 +25,11 @@ export default function SettlementsPage() {
       <section className="panel-card panel-hero">
         <div>
           <p className="eyebrow">Settlement board</p>
-          <h1>Published match settlements stay visible to everyone.</h1>
+          <h1>{tournament?.shortName ?? "Tournament"} settlements stay separate and visible.</h1>
           <p className="support-copy">
             Admins decide the winner, then the carry-forward math and user list
-            become visible here for all participants.
+            become visible here for all participants without mixing with the
+            other tournament.
           </p>
         </div>
         <div className="profile-chip-grid">
@@ -34,8 +38,8 @@ export default function SettlementsPage() {
             <strong>{latestSettlement ? 1 : 0}</strong>
           </div>
           <div className="profile-chip">
-            <span>Carry waiting</span>
-            <strong>Rs {state.carryBalance}</strong>
+            <span>{tournament?.shortName} carry waiting</span>
+            <strong>Rs {getCarryBalance(state, currentTournament)}</strong>
           </div>
         </div>
       </section>

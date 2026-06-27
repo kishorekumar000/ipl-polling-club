@@ -2,17 +2,25 @@
 
 import Link from "next/link";
 import { useEffect } from "react";
-import { getTeam } from "../../lib/club-data";
+import { getTeam, getTournament, TOURNAMENTS } from "../../lib/club-data";
 import { useClubStore } from "../../lib/club-state";
 import { NotificationCenter } from "./notification-center";
 import { TeamBrandBadge } from "./team-brand-badge";
 
 export function ClubHeader() {
-  const { ready, session, state, setSession } = useClubStore();
+  const {
+    ready,
+    session,
+    state,
+    currentTournament,
+    setCurrentTournament,
+    setSession
+  } = useClubStore();
   const currentUser = state.users.find((user) => user.id === session?.userId);
   const favoriteTeam = currentUser?.favoriteTeamCode
     ? getTeam(currentUser.favoriteTeamCode)
     : undefined;
+  const tournament = getTournament(currentTournament);
   const roleLabel =
     currentUser?.role === "admin"
       ? currentUser.adminLevel === "super"
@@ -55,7 +63,7 @@ export function ClubHeader() {
     >
       <div className="club-header-inner">
         <Link className="home-link" href="/">
-          IPL Home
+          Match Club
         </Link>
 
         <nav className="club-nav">
@@ -67,7 +75,26 @@ export function ClubHeader() {
           {!currentUser ? <Link href="/admin">Admin</Link> : null}
         </nav>
 
+        <div className="tournament-switch" role="tablist" aria-label="Tournament switch">
+          {TOURNAMENTS.map((item) => (
+            <button
+              aria-selected={currentTournament === item.code}
+              className={`tournament-chip ${currentTournament === item.code ? "active" : ""}`}
+              key={item.code}
+              onClick={() => setCurrentTournament(item.code)}
+              type="button"
+            >
+              {item.shortName}
+            </button>
+          ))}
+        </div>
+
         <div className="club-user-chip">
+          {tournament ? (
+            <span className="tournament-indicator">
+              {tournament.shortName} live
+            </span>
+          ) : null}
           {currentUser ? (
             <>
               {favoriteTeam ? <TeamBrandBadge compact team={favoriteTeam} /> : null}

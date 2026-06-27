@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import { getTournament } from "../../lib/club-data";
 import { getMatchPhase } from "../../lib/club-logic";
 import { useClubStore } from "../../lib/club-state";
 import { useDailyMatches } from "../../lib/use-daily-matches";
@@ -41,7 +42,7 @@ function buildNotificationFromAudit(event: AuditEvent): Omit<AppNotification, "r
         ...common,
         kind: "profile",
         title: "New member joined",
-        body: `${event.actorName} entered the IPL club.`,
+        body: `${event.actorName} entered the match club.`,
         url: "/"
       };
     case "favorite-team":
@@ -98,8 +99,8 @@ function buildNotificationFromAudit(event: AuditEvent): Omit<AppNotification, "r
 }
 
 export function AppRuntime() {
-  const { ready, state, updateState } = useClubStore();
-  const { todayMatches } = useDailyMatches();
+  const { ready, state, currentTournament, updateState } = useClubStore();
+  const { todayMatches } = useDailyMatches(currentTournament);
   const [permission, setPermission] = useState<NotificationPermission>("default");
   const scheduledTimeouts = useRef<number[]>([]);
   const processedAuditIds = useRef<Set<string>>(new Set());
@@ -110,6 +111,7 @@ export function AppRuntime() {
     () => state.appNotifications.filter((item) => !item.read).length,
     [state.appNotifications]
   );
+  const tournament = getTournament(currentTournament);
 
   const pushNotification = async (notification: AppNotification, browser = true) => {
     updateState((current) => {
@@ -302,7 +304,7 @@ export function AppRuntime() {
         {
           id: `system-enabled-${Date.now()}`,
           title: "Notifications enabled",
-          body: "You will now receive IPL club alerts on this device.",
+          body: `You will now receive ${tournament?.shortName ?? "match club"} alerts on this device.`,
           kind: "system",
           url: "/",
           createdAt: new Date().toISOString(),
@@ -323,9 +325,9 @@ export function AppRuntime() {
         <div>
           <strong>Turn on website alerts</strong>
           <p>
-            Allow browser notifications for poll openings, vote deadlines,
-            results, and club activity. Your unread alerts are still tracked
-            inside the website header too.
+            Allow browser notifications for {tournament?.shortName ?? "today's"} poll
+            openings, vote deadlines, results, and club activity. Your unread
+            alerts are still tracked inside the website header too.
           </p>
         </div>
         <div className="hero-actions runtime-actions">

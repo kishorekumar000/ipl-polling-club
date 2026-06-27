@@ -1,7 +1,8 @@
 export type UserRole = "user" | "admin";
 export type AdminLevel = "super" | "standard";
+export type TournamentCode = "IPL" | "FIFA";
 
-export type TeamCode =
+export type IplTeamCode =
   | "CSK"
   | "DC"
   | "GT"
@@ -13,7 +14,28 @@ export type TeamCode =
   | "RR"
   | "SRH";
 
+export type FifaTeamCode =
+  | "ARG"
+  | "BRA"
+  | "ENG"
+  | "ESP"
+  | "FRA"
+  | "GER"
+  | "ITA"
+  | "MAR"
+  | "MEX"
+  | "NED"
+  | "POR"
+  | "SEN"
+  | "USA"
+  | "URU"
+  | "JPN"
+  | "CRO";
+
+export type TeamCode = IplTeamCode | FifaTeamCode;
+
 export type ClubTeam = {
+  tournamentCode: TournamentCode;
   code: TeamCode;
   name: string;
   shortName: string;
@@ -41,6 +63,7 @@ export type ClubUser = {
 
 export type MatchRecord = {
   id: string;
+  tournamentCode: TournamentCode;
   dayKey: string;
   title: string;
   subtitle: string;
@@ -75,6 +98,7 @@ export type SettlementEntry = {
 };
 
 export type SettlementRecord = {
+  tournamentCode: TournamentCode;
   matchId: string;
   matchTitle: string;
   winnerTeamCode: TeamCode;
@@ -113,6 +137,7 @@ export type AppNotification = {
   createdAt: string;
   read: boolean;
   kind: AppNotificationKind;
+  tournamentCode?: TournamentCode;
   url?: string;
  };
 
@@ -121,7 +146,7 @@ export type AppState = {
   matches: MatchRecord[];
   votes: VoteRecord[];
   settlements: SettlementRecord[];
-  carryBalance: number;
+  carryBalances: Record<TournamentCode, number>;
   auditTrail: AuditEvent[];
   appNotifications: AppNotification[];
 };

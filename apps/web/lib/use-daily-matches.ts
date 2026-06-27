@@ -3,9 +3,9 @@
 import { useEffect, useState } from "react";
 import { getIstDayKey, upsertMatches } from "./club-logic";
 import { useClubStore } from "./club-state";
-import { MatchRecord } from "./club-types";
+import { MatchRecord, TournamentCode } from "./club-types";
 
-export function useDailyMatches() {
+export function useDailyMatches(tournamentCode: TournamentCode) {
   const { ready, state, updateState } = useClubStore();
   const [todayMatches, setTodayMatches] = useState<MatchRecord[]>([]);
   const [loading, setLoading] = useState(true);
@@ -21,7 +21,7 @@ export function useDailyMatches() {
     async function syncMatches() {
       try {
         setLoading(true);
-        const response = await fetch("/api/matches/today", {
+        const response = await fetch(`/api/matches/today?tournament=${tournamentCode}`, {
           cache: "no-store"
         });
         const payload = (await response.json()) as {
@@ -30,7 +30,7 @@ export function useDailyMatches() {
         };
 
         if (!response.ok || !payload.matches) {
-          throw new Error(payload.error ?? "Could not load today's IPL schedule.");
+          throw new Error(payload.error ?? `Could not load today's ${tournamentCode} schedule.`);
         }
 
         if (isCancelled) {
@@ -51,12 +51,15 @@ export function useDailyMatches() {
         setError(
           caughtError instanceof Error
             ? caughtError.message
-            : "Could not load today's IPL schedule."
+            : `Could not load today's ${tournamentCode} schedule.`
         );
 
         const todayKey = getIstDayKey();
         setTodayMatches(
-          state.matches.filter((match) => match.dayKey === todayKey)
+          state.matches.filter(
+            (match) =>
+              match.dayKey === todayKey && match.tournamentCode === tournamentCode
+          )
         );
       } finally {
         if (!isCancelled) {
@@ -70,7 +73,7 @@ export function useDailyMatches() {
     return () => {
       isCancelled = true;
     };
-  }, [ready]);
+  }, [ready, tournamentCode]);
 
   return {
     todayMatches,

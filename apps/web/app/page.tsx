@@ -3,19 +3,27 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { FormEvent, useState } from "react";
-import { countUsersByRole } from "../lib/club-data";
+import { countUsersByRole, getTournament } from "../lib/club-data";
 import { createPublicId, isNameTaken, normalizeName } from "../lib/club-logic";
 import { useClubStore } from "../lib/club-state";
 import { useDailyMatches } from "../lib/use-daily-matches";
 
 export default function HomePage() {
   const router = useRouter();
-  const { ready, session, state, updateState, setSession } = useClubStore();
-  const { todayMatches, loading, error } = useDailyMatches();
+  const {
+    ready,
+    session,
+    state,
+    currentTournament,
+    updateState,
+    setSession
+  } = useClubStore();
+  const { todayMatches, loading, error } = useDailyMatches(currentTournament);
   const [name, setName] = useState("");
   const [loginKey, setLoginKey] = useState("");
   const [joinError, setJoinError] = useState("");
   const [loginError, setLoginError] = useState("");
+  const tournament = getTournament(currentTournament);
   const currentUser = state.users.find((user) => user.id === session?.userId);
   const playerProfiles = state.users.filter((user) => user.role === "user");
 
@@ -113,10 +121,11 @@ export default function HomePage() {
       <section className="panel-card panel-hero">
         <div>
           <p className="eyebrow">User entrance</p>
-          <h1>Join the IPL club with your own profile.</h1>
+          <h1>Join the match club with your own profile.</h1>
           <p className="support-copy">
             Create your profile with your name, get a unique ID, then lock your
-            favorite team on the next page. Admin controls stay separate.
+            favorite IPL team on the next page. Then switch between {tournament?.shortName ?? "tournaments"}
+            without mixing settlements. Admin controls stay separate.
           </p>
         </div>
 
@@ -130,7 +139,7 @@ export default function HomePage() {
             <strong>{countUsersByRole(state, "admin")}</strong>
           </div>
           <div className="profile-chip">
-            <span>Today&apos;s matches</span>
+            <span>{tournament?.shortName} today</span>
             <strong>{todayMatches.length}</strong>
           </div>
         </div>
@@ -228,8 +237,8 @@ export default function HomePage() {
       )}
 
       <section className="panel-card">
-        <p className="eyebrow">Today&apos;s real fixture slate</p>
-        <h2>Match polls now track the current IPL day.</h2>
+        <p className="eyebrow">Today&apos;s active tournament slate</p>
+        <h2>{tournament?.name ?? "Tournament"} polls stay on their own lane.</h2>
         {loading ? (
           <p className="support-copy">Syncing today&apos;s schedule...</p>
         ) : null}
@@ -247,10 +256,10 @@ export default function HomePage() {
           ))}
           {!loading && todayMatches.length === 0 ? (
             <div className="feature-card">
-              <strong>No IPL match found for today</strong>
+              <strong>No {tournament?.shortName ?? "tournament"} match found for today</strong>
               <p className="support-copy">
-                The app will show the daily poll automatically whenever a fixture
-                exists on the current date.
+                Switch tournaments from the header any time. Each one keeps its
+                own fixtures, votes, and settlement flow separate.
               </p>
             </div>
           ) : null}

@@ -2,16 +2,17 @@
 
 import Link from "next/link";
 import { FormEvent, useState } from "react";
-import { getTeam } from "../../lib/club-data";
+import { getTeam, getTournament } from "../../lib/club-data";
 import { isNameTaken, normalizeName } from "../../lib/club-logic";
 import { useClubStore } from "../../lib/club-state";
 import { TeamBrandBadge } from "../components/team-brand-badge";
 
 export default function SetupPage() {
-  const { ready, session, state, updateState } = useClubStore();
+  const { ready, session, state, currentTournament, updateState } = useClubStore();
   const [renameValue, setRenameValue] = useState("");
   const [error, setError] = useState("");
   const currentUser = state.users.find((user) => user.id === session?.userId);
+  const tournament = getTournament(currentTournament);
 
   if (!ready) {
     return <main className="page-shell">Loading profile studio...</main>;
@@ -122,7 +123,7 @@ export default function SetupPage() {
             <strong>{roleLabel}</strong>
           </div>
           <div className="profile-chip">
-            <span>Favorite team</span>
+            <span>Theme team</span>
             <strong>{favoriteTeam?.name ?? "Not locked yet"}</strong>
           </div>
           <div className="profile-chip">
@@ -169,7 +170,7 @@ export default function SetupPage() {
         <p className="eyebrow">Favorite team</p>
         <h2>Team theme stays locked forever.</h2>
         <p className="support-copy">
-          That favorite team powers the visuals across the rest of the site.
+          That favorite IPL team powers the visuals across both IPL and {tournament?.shortName ?? "FIFA"} pages.
         </p>
         <div className="hero-actions">
           {!favoriteTeam ? (

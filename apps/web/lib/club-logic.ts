@@ -5,8 +5,11 @@ import {
   SettlementEntry,
   SettlementRecord,
   TeamCode,
+  TournamentCode,
   VoteRecord
 } from "./club-types";
+
+const TOURNAMENT_ORDER: TournamentCode[] = ["IPL", "FIFA"];
 
 export function normalizeName(value: string) {
   return value.trim().toLowerCase().replace(/\s+/g, " ");
@@ -140,6 +143,14 @@ export function getFinalTeams(
 }
 
 function compareMatches(a: MatchRecord, b: MatchRecord) {
+  const tournamentGap =
+    TOURNAMENT_ORDER.indexOf(a.tournamentCode) -
+    TOURNAMENT_ORDER.indexOf(b.tournamentCode);
+
+  if (tournamentGap !== 0) {
+    return tournamentGap;
+  }
+
   return new Date(a.startsAt).getTime() - new Date(b.startsAt).getTime();
 }
 
@@ -199,7 +210,10 @@ export function upsertMatches(
 
 export function recomputeSettlements(state: AppState): AppState {
   const matches = [...state.matches].sort(compareMatches);
-  let carry = 0;
+  const carryBalances: AppState["carryBalances"] = {
+    IPL: state.carryBalances.IPL ?? 0,
+    FIFA: state.carryBalances.FIFA ?? 0
+  };
 
   const settlements: SettlementRecord[] = matches.flatMap((match) => {
     if (!match.winnerTeamCode) {
@@ -216,17 +230,18 @@ export function recomputeSettlements(state: AppState): AppState {
       (vote) => vote.teamCode !== match.winnerTeamCode
     );
 
-    const carryIn = carry;
+    const carryIn = carryBalances[match.tournamentCode] ?? 0;
     const totalPool = loserVotes.length * 5 + carryIn;
     const sharePerWinner =
       winnerVotes.length > 0 ? Math.floor(totalPool / winnerVotes.length) : 0;
     const remainder =
       winnerVotes.length > 0 ? totalPool % winnerVotes.length : totalPool;
 
-    carry = remainder;
+    carryBalances[match.tournamentCode] = remainder;
 
     return [
       {
+        tournamentCode: match.tournamentCode,
         matchId: match.id,
         matchTitle: match.title,
         winnerTeamCode: match.winnerTeamCode,
@@ -250,7 +265,7 @@ export function recomputeSettlements(state: AppState): AppState {
   return {
     ...state,
     settlements,
-    carryBalance: carry
+    carryBalances
   };
 }
 

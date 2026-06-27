@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { getTeam } from "../../../lib/club-data";
+import { getCarryBalance, getTeam, getTournament } from "../../../lib/club-data";
 import {
   ClubUser,
   MatchRecord,
@@ -192,9 +192,16 @@ function MatchPollCard({
 }
 
 export default function PollsTodayPage() {
-  const { ready, session, state, updateState } = useClubStore();
-  const { todayMatches, loading, error } = useDailyMatches();
+  const {
+    ready,
+    session,
+    state,
+    currentTournament,
+    updateState
+  } = useClubStore();
+  const { todayMatches, loading, error } = useDailyMatches(currentTournament);
   const currentUser = state.users.find((user) => user.id === session?.userId);
+  const tournament = getTournament(currentTournament);
 
   const handleVote = (matchId: string, teamCode: TeamCode) => {
     if (!currentUser) {
@@ -291,8 +298,9 @@ export default function PollsTodayPage() {
             <p className="eyebrow">Today&apos;s poll room</p>
             <h1>Real daily matches. Real vote windows.</h1>
             <p className="support-copy">
-              Your favorite team theme follows you across the experience, and the
-              voting windows track the synced daily IPL schedule.
+              Your favorite team theme follows you across the experience, while
+              {` ${tournament?.shortName ?? "the active tournament"} `}
+              stays isolated with its own voting window and settlement flow.
             </p>
           </div>
           {favoriteTeam ? <TeamBrandBadge team={favoriteTeam} /> : null}
@@ -311,8 +319,8 @@ export default function PollsTodayPage() {
             <strong>{favoriteTeam?.name}</strong>
           </div>
           <div className="profile-chip">
-            <span>Carry balance</span>
-            <strong>Rs {state.carryBalance}</strong>
+            <span>{tournament?.shortName} carry</span>
+            <strong>Rs {getCarryBalance(state, currentTournament)}</strong>
           </div>
         </div>
       </section>
@@ -343,7 +351,7 @@ export default function PollsTodayPage() {
         {!loading && todayMatches.length === 0 ? (
           <section className="panel-card">
             <p className="eyebrow">No fixture today</p>
-            <h2>There is no IPL match synced for the current date.</h2>
+            <h2>There is no {tournament?.shortName ?? "active"} match synced for the current date.</h2>
           </section>
         ) : null}
       </section>
