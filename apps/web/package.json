@@ -2,6 +2,7 @@
   "name": "@ipl/web",
   "private": true,
   "version": "0.1.0",
+  "packageManager": "npm@11.12.1",
   "scripts": {
     "dev": "next dev",
     "build": "next build",
@@ -14,6 +15,9 @@
     "react-dom": "^19.0.0"
   },
   "devDependencies": {
-    "@types/react": "19.2.14"
+    "@types/node": "^22.10.2",
+    "@types/react": "19.2.14",
+    "@types/react-dom": "^19.0.2",
+    "typescript": "^5.7.2"
   }
 }
