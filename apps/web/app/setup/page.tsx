@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { FormEvent, useState } from "react";
-import { getTeam, getTournament } from "../../lib/club-data";
+import { getTeam } from "../../lib/club-data";
 import { isNameTaken, normalizeName } from "../../lib/club-logic";
 import { useClubStore } from "../../lib/club-state";
 import { TeamBrandBadge } from "../components/team-brand-badge";
@@ -12,7 +12,6 @@ export default function SetupPage() {
   const [renameValue, setRenameValue] = useState("");
   const [error, setError] = useState("");
   const currentUser = state.users.find((user) => user.id === session?.userId);
-  const tournament = getTournament(currentTournament);
 
   if (!ready) {
     return <main className="page-shell">Loading profile studio...</main>;
@@ -37,6 +36,7 @@ export default function SetupPage() {
   const favoriteTeam = currentUser.favoriteTeamCode
     ? getTeam(currentUser.favoriteTeamCode)
     : undefined;
+  const showFavoriteBrand = currentTournament === "IPL" && favoriteTeam;
   const hasRenameLeft = currentUser.renameCount < 2;
   const isFinalRename = currentUser.renameCount === 1;
   const roleLabel =
@@ -102,8 +102,8 @@ export default function SetupPage() {
       <section
         className="panel-card panel-hero"
         style={{
-          background: favoriteTeam
-            ? `linear-gradient(135deg, ${favoriteTeam.primary}22, ${favoriteTeam.secondary}11), rgba(9, 23, 43, 0.8)`
+          background: showFavoriteBrand
+            ? `linear-gradient(135deg, ${showFavoriteBrand.primary}22, ${showFavoriteBrand.secondary}11), rgba(9, 23, 43, 0.8)`
             : undefined
         }}
       >
@@ -115,7 +115,7 @@ export default function SetupPage() {
               Your profile is saved locally with unique ID {currentUser.publicId}.
             </p>
           </div>
-          {favoriteTeam ? <TeamBrandBadge team={favoriteTeam} /> : null}
+          {showFavoriteBrand ? <TeamBrandBadge team={showFavoriteBrand} /> : null}
         </div>
         <div className="profile-chip-grid">
           <div className="profile-chip">
@@ -170,7 +170,7 @@ export default function SetupPage() {
         <p className="eyebrow">Favorite team</p>
         <h2>Team theme stays locked forever.</h2>
         <p className="support-copy">
-          That favorite IPL team powers the visuals across both IPL and {tournament?.shortName ?? "FIFA"} pages.
+          Your locked cricket team colors stay with the cricket side. Football pages keep their own tournament styling.
         </p>
         <div className="hero-actions">
           {!favoriteTeam ? (

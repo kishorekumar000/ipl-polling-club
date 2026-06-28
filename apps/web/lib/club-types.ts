@@ -16,21 +16,46 @@ export type IplTeamCode =
 
 export type FifaTeamCode =
   | "ARG"
+  | "AUS"
+  | "AUT"
+  | "BEL"
   | "BRA"
+  | "CAN"
+  | "CHI"
+  | "COL"
+  | "CRC"
+  | "CRO"
+  | "DEN"
+  | "ECU"
+  | "EGY"
   | "ENG"
   | "ESP"
   | "FRA"
   | "GER"
+  | "GHA"
+  | "IRN"
   | "ITA"
+  | "JPN"
+  | "KOR"
   | "MAR"
   | "MEX"
   | "NED"
+  | "NGA"
+  | "NZL"
+  | "PAR"
+  | "POL"
   | "POR"
+  | "RSA"
   | "SEN"
-  | "USA"
+  | "SRB"
+  | "SUI"
+  | "TUN"
+  | "TUR"
+  | "UKR"
   | "URU"
-  | "JPN"
-  | "CRO";
+  | "USA"
+  | "WAL"
+  | string;
 
 export type TeamCode = IplTeamCode | FifaTeamCode;
 
@@ -71,6 +96,18 @@ export type MatchRecord = {
   matchNumber: number;
   homeTeamCode: TeamCode;
   awayTeamCode: TeamCode;
+  homeTeamName?: string;
+  awayTeamName?: string;
+  homeTeamShortName?: string;
+  awayTeamShortName?: string;
+  homeTeamLogoPath?: string;
+  awayTeamLogoPath?: string;
+  homeTeamPrimary?: string;
+  awayTeamPrimary?: string;
+  homeTeamSecondary?: string;
+  awayTeamSecondary?: string;
+  homeTeamAccent?: string;
+  awayTeamAccent?: string;
   startsAt: string;
   pollOpenAt: string;
   pollLockAt: string;

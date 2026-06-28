@@ -1,6 +1,6 @@
 "use client";
 
-import { getCarryBalance, getTeam, getTournament } from "../../lib/club-data";
+import { getCarryBalance, getDisplayTeam, getTournament } from "../../lib/club-data";
 import { formatAmount } from "../../lib/club-logic";
 import { useClubStore } from "../../lib/club-state";
 
@@ -22,7 +22,7 @@ export default function SettlementsPage() {
 
   return (
     <main className="page-shell">
-      <section className="panel-card panel-hero">
+      <section className={`panel-card panel-hero ${currentTournament === "FIFA" ? "panel-hero-fifa" : ""}`}>
         <div>
           <p className="eyebrow">Settlement board</p>
           <h1>{tournament?.shortName ?? "Tournament"} settlements stay separate and visible.</h1>
@@ -46,7 +46,9 @@ export default function SettlementsPage() {
 
       <section className="stack-list">
         {latestSettlement ? (() => {
-          const winner = getTeam(latestSettlement.winnerTeamCode);
+          const winner = getDisplayTeam(latestSettlement.winnerTeamCode, {
+            tournamentCode: latestSettlement.tournamentCode
+          });
 
           return (
             <article className="panel-card" key={latestSettlement.matchId}>

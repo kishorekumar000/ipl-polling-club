@@ -34,6 +34,16 @@ export function ClubHeader() {
     }
 
     const root = document.documentElement;
+    root.dataset.tournament = currentTournament;
+
+    if (currentTournament === "FIFA") {
+      root.style.setProperty("--bg-glow", "rgba(34, 197, 94, 0.2)");
+      root.style.setProperty("--bg-mist", "rgba(14, 165, 233, 0.16)");
+      root.style.setProperty("--bg-primary", "#051521");
+      root.style.setProperty("--bg-secondary", "#0a2a1f");
+      root.style.setProperty("--bg-tertiary", "#03141d");
+      return;
+    }
 
     if (!favoriteTeam) {
       root.style.setProperty("--bg-glow", "rgba(72, 167, 255, 0.2)");
@@ -49,7 +59,7 @@ export function ClubHeader() {
     root.style.setProperty("--bg-primary", "#04101a");
     root.style.setProperty("--bg-secondary", `${favoriteTeam.primary}20`);
     root.style.setProperty("--bg-tertiary", `${favoriteTeam.secondary}12`);
-  }, [favoriteTeam]);
+  }, [currentTournament, favoriteTeam]);
 
   return (
     <header
@@ -97,7 +107,9 @@ export function ClubHeader() {
           ) : null}
           {currentUser ? (
             <>
-              {favoriteTeam ? <TeamBrandBadge compact team={favoriteTeam} /> : null}
+              {favoriteTeam && currentTournament === "IPL" ? (
+                <TeamBrandBadge compact team={favoriteTeam} />
+              ) : null}
               <span>
                 {currentUser.name} | {currentUser.publicId} | {roleLabel}
               </span>

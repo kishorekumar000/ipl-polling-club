@@ -10,6 +10,9 @@ import { MatchRecord, TeamCode, TournamentCode } from "../../../../lib/club-type
 const IPL_SCHEDULE_SOURCE_URL =
   "https://www.schedulefixtures.com/series/ipl-2026/511/schedule-fixtures";
 const IPL_SCHEDULE_TIMEOUT_MS = 8000;
+const FIFA_SCOREBOARD_BASE_URL =
+  "https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.world/scoreboard";
+const FIFA_SCOREBOARD_TIMEOUT_MS = 8000;
 
 const MONTHS: Record<string, string> = {
   Jan: "01",
@@ -81,6 +84,15 @@ const FIFA_FALLBACK_FIXTURES: Record<
 
 function toIstIso(dayKey: string, time: string) {
   return `${dayKey}T${time}:00+05:30`;
+}
+
+function getDateCandidates(dayKey: string) {
+  const base = new Date(`${dayKey}T00:00:00+05:30`);
+
+  return [-1, 0, 1].map((offset) => {
+    const next = new Date(base.getTime() + offset * 24 * 60 * 60 * 1000);
+    return getIstDayKey(next).replaceAll("-", "");
+  });
 }
 
 function dateToIstIso(value: Date) {
@@ -334,6 +346,91 @@ function buildFifaFallbackMatches(todayKey: string) {
   );
 }
 
+function toHexColor(value?: string, fallback = "#115e59") {
+  if (!value) {
+    return fallback;
+  }
+
+  return value.startsWith("#") ? value : `#${value}`;
+}
+
+type EspnCompetitor = {
+  homeAway?: "home" | "away";
+  team?: {
+    abbreviation?: string;
+    displayName?: string;
+    shortDisplayName?: string;
+    logo?: string;
+    color?: string;
+    alternateColor?: string;
+  };
+};
+
+type EspnEvent = {
+  id?: string;
+  date?: string;
+  competitions?: Array<{
+    venue?: { fullName?: string };
+    competitors?: EspnCompetitor[];
+  }>;
+};
+
+function mapFifaEventToMatch(
+  event: EspnEvent,
+  todayKey: string,
+  index: number
+): MatchRecord | null {
+  const competition = event.competitions?.[0];
+  const homeCompetitor = competition?.competitors?.find(
+    (competitor) => competitor.homeAway === "home"
+  );
+  const awayCompetitor = competition?.competitors?.find(
+    (competitor) => competitor.homeAway === "away"
+  );
+
+  const homeTeamCode = homeCompetitor?.team?.abbreviation?.toUpperCase();
+  const awayTeamCode = awayCompetitor?.team?.abbreviation?.toUpperCase();
+  const startsAt = event.date ? dateToIstIso(new Date(event.date)) : undefined;
+
+  if (!homeTeamCode || !awayTeamCode || !startsAt || !startsAt.startsWith(todayKey)) {
+    return null;
+  }
+
+  const homeTeamName = homeCompetitor?.team?.displayName ?? homeTeamCode;
+  const awayTeamName = awayCompetitor?.team?.displayName ?? awayTeamCode;
+
+  return {
+    id: `fifa-${event.id ?? `${todayKey}-${homeTeamCode}-${awayTeamCode}`}`,
+    tournamentCode: "FIFA",
+    dayKey: todayKey,
+    title: buildRivalryTitle("FIFA", homeTeamCode, awayTeamCode),
+    subtitle: `${homeTeamName} vs ${awayTeamName}${competition?.venue?.fullName ? ` at ${competition.venue.fullName}` : ""}`,
+    venue: competition?.venue?.fullName ?? "World Cup venue",
+    matchNumber: index + 1,
+    homeTeamCode,
+    awayTeamCode,
+    homeTeamName,
+    awayTeamName,
+    homeTeamShortName:
+      homeCompetitor?.team?.shortDisplayName ?? homeCompetitor?.team?.abbreviation ?? homeTeamCode,
+    awayTeamShortName:
+      awayCompetitor?.team?.shortDisplayName ?? awayCompetitor?.team?.abbreviation ?? awayTeamCode,
+    homeTeamLogoPath: homeCompetitor?.team?.logo,
+    awayTeamLogoPath: awayCompetitor?.team?.logo,
+    homeTeamPrimary: toHexColor(homeCompetitor?.team?.color, "#14532d"),
+    awayTeamPrimary: toHexColor(awayCompetitor?.team?.color, "#14532d"),
+    homeTeamSecondary: toHexColor(homeCompetitor?.team?.alternateColor, "#082f49"),
+    awayTeamSecondary: toHexColor(awayCompetitor?.team?.alternateColor, "#082f49"),
+    homeTeamAccent: "#99f6e4",
+    awayTeamAccent: "#99f6e4",
+    startsAt,
+    pollOpenAt: startsAt,
+    pollLockAt: startsAt,
+    sourceLabel: "ESPN public FIFA World Cup scoreboard",
+    sourceUrl: `${FIFA_SCOREBOARD_BASE_URL}?dates=${startsAt.slice(0, 10).replaceAll("-", "")}`
+  } satisfies MatchRecord;
+}
+
 async function getIplMatches(todayKey: string) {
   try {
     const response = await fetch(IPL_SCHEDULE_SOURCE_URL, {
@@ -364,8 +461,57 @@ async function getIplMatches(todayKey: string) {
   }
 }
 
-function getFifaMatches(todayKey: string) {
-  return buildFifaFallbackMatches(todayKey);
+async function getFifaMatches(todayKey: string) {
+  try {
+    const scheduleDates = getDateCandidates(todayKey);
+    const responses = await Promise.all(
+      scheduleDates.map((scheduleDate) =>
+        fetch(`${FIFA_SCOREBOARD_BASE_URL}?dates=${scheduleDate}`, {
+          signal: AbortSignal.timeout(FIFA_SCOREBOARD_TIMEOUT_MS),
+          next: { revalidate: 600 }
+        }).then(async (response) => {
+          if (!response.ok) {
+            throw new Error(`FIFA schedule fetch failed with status ${response.status}`);
+          }
+
+          return (await response.json()) as {
+            events?: EspnEvent[];
+          };
+        })
+      )
+    );
+
+    const events = responses.flatMap((response) => response.events ?? []);
+    const seenMatchIds = new Set<string>();
+
+    const matches = events
+      .map((event, index) => mapFifaEventToMatch(event, todayKey, index))
+      .filter((match): match is MatchRecord => Boolean(match))
+      .filter((match) => {
+        if (seenMatchIds.has(match.id)) {
+          return false;
+        }
+
+        seenMatchIds.add(match.id);
+        return true;
+      })
+      .sort(
+        (left, right) =>
+          new Date(left.startsAt).getTime() - new Date(right.startsAt).getTime()
+      )
+      .map((match, index) => ({
+        ...match,
+        matchNumber: index + 1
+      }));
+
+    if (matches.length === 0) {
+      return buildFifaFallbackMatches(todayKey);
+    }
+
+    return applyFifaPollWindows(matches);
+  } catch {
+    return buildFifaFallbackMatches(todayKey);
+  }
 }
 
 export async function GET(request: NextRequest) {
@@ -376,7 +522,7 @@ export async function GET(request: NextRequest) {
 
   const matches =
     tournamentCode === "FIFA"
-      ? getFifaMatches(todayKey)
+      ? await getFifaMatches(todayKey)
       : await getIplMatches(todayKey);
 
   return NextResponse.json({

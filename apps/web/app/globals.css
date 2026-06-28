@@ -10,6 +10,8 @@
   --bg-primary: #06101a;
   --bg-secondary: #081a2f;
   --bg-tertiary: #041425;
+  --chip-primary: #ffcb47;
+  --chip-secondary: #ff9447;
 }
 
 * {
@@ -96,9 +98,14 @@ input {
 }
 
 .tournament-chip.active {
-  background: linear-gradient(135deg, var(--gold), #ff9447);
+  background: linear-gradient(135deg, var(--chip-primary), var(--chip-secondary));
   color: #08111d;
   font-weight: 700;
+}
+
+:root[data-tournament="FIFA"] {
+  --chip-primary: #86efac;
+  --chip-secondary: #38bdf8;
 }
 
 .club-user-chip {
@@ -262,6 +269,14 @@ input {
   overflow: hidden;
 }
 
+.panel-hero-fifa {
+  background-image:
+    radial-gradient(circle at top right, rgba(126, 243, 208, 0.12), transparent 26%),
+    linear-gradient(0deg, rgba(255, 255, 255, 0.05) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.04) 1px, transparent 1px);
+  background-size: auto, 100% 36px, 36px 100%;
+}
+
 .hero-with-brand {
   display: flex;
   flex-wrap: wrap;
@@ -281,14 +296,14 @@ input {
 
 h1 {
   margin: 0;
-  max-width: 12ch;
-  font-size: clamp(2.5rem, 6vw, 4.8rem);
-  line-height: 0.95;
+  max-width: 14ch;
+  font-size: clamp(2.1rem, 4.4vw, 3.6rem);
+  line-height: 1.02;
 }
 
 h2 {
   margin: 0;
-  font-size: clamp(1.6rem, 3vw, 2.5rem);
+  font-size: clamp(1.35rem, 2.5vw, 2rem);
 }
 
 h3 {
@@ -300,7 +315,7 @@ h3 {
   max-width: 62ch;
   margin: 16px 0 0;
   color: var(--muted);
-  font-size: 1.03rem;
+  font-size: 0.98rem;
   line-height: 1.6;
 }
 
@@ -532,6 +547,31 @@ h3 {
   border: 1px solid var(--panel-border);
   border-radius: 30px;
   padding: 28px;
+}
+
+.poll-card-fifa::before {
+  content: "";
+  position: absolute;
+  inset: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 22px;
+  pointer-events: none;
+}
+
+.poll-card-fifa::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 14px;
+  bottom: 14px;
+  width: 1px;
+  background: rgba(255, 255, 255, 0.08);
+  transform: translateX(-50%);
+  pointer-events: none;
+}
+
+.poll-card-fifa .eyebrow {
+  color: #8af4d8;
 }
 
 .favorite-watermark {

@@ -2,7 +2,12 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { getCarryBalance, getTeam, getTournament } from "../../../lib/club-data";
+import {
+  getCarryBalance,
+  getDisplayTeam,
+  getTeam,
+  getTournament
+} from "../../../lib/club-data";
 import {
   ClubUser,
   MatchRecord,
@@ -51,32 +56,49 @@ function MatchPollCard({
   const phase = getMatchPhase(match, now);
   const currentVote = getVoteForUser(votes, currentUserId, match.id);
   const finalTeams = getFinalTeams(match, votes, users);
+  const showIplFavoriteTheme = match.tournamentCode === "IPL" && favoriteTeam;
 
-  const homeTeam = getTeam(match.homeTeamCode);
-  const awayTeam = getTeam(match.awayTeamCode);
+  const homeTeam = getDisplayTeam(match.homeTeamCode, {
+    tournamentCode: match.tournamentCode,
+    name: match.homeTeamName,
+    shortName: match.homeTeamShortName,
+    logoPath: match.homeTeamLogoPath,
+    primary: match.homeTeamPrimary,
+    secondary: match.homeTeamSecondary,
+    accent: match.homeTeamAccent
+  });
+  const awayTeam = getDisplayTeam(match.awayTeamCode, {
+    tournamentCode: match.tournamentCode,
+    name: match.awayTeamName,
+    shortName: match.awayTeamShortName,
+    logoPath: match.awayTeamLogoPath,
+    primary: match.awayTeamPrimary,
+    secondary: match.awayTeamSecondary,
+    accent: match.awayTeamAccent
+  });
 
-  if (!homeTeam || !awayTeam) {
-    return null;
-  }
+  const cardClassName = `poll-card ${match.tournamentCode === "FIFA" ? "poll-card-fifa" : ""}`;
 
   return (
     <article
-      className="poll-card"
+      className={cardClassName}
       style={{
-        background: favoriteTeam
-          ? `linear-gradient(135deg, ${favoriteTeam.primary}22, ${favoriteTeam.secondary}11), rgba(7, 17, 31, 0.92)`
+        background: showIplFavoriteTheme
+          ? `linear-gradient(135deg, ${showIplFavoriteTheme.primary}22, ${showIplFavoriteTheme.secondary}11), rgba(7, 17, 31, 0.92)`
+          : match.tournamentCode === "FIFA"
+            ? "linear-gradient(160deg, rgba(11, 68, 46, 0.88), rgba(3, 20, 29, 0.96))"
           : undefined
       }}
     >
-      {favoriteTeam ? (
-        favoriteTeam.logoPath ? (
+      {showIplFavoriteTheme ? (
+        showIplFavoriteTheme.logoPath ? (
           <img
-            alt={`${favoriteTeam.name} logo watermark`}
+            alt={`${showIplFavoriteTheme.name} logo watermark`}
             className="favorite-logo-watermark"
-            src={favoriteTeam.logoPath}
+            src={showIplFavoriteTheme.logoPath}
           />
         ) : (
-          <div className="favorite-watermark">{favoriteTeam.shortName}</div>
+          <div className="favorite-watermark">{showIplFavoriteTheme.shortName}</div>
         )
       ) : null}
 
@@ -87,7 +109,9 @@ function MatchPollCard({
 
       <div className="match-heading">
         <div>
-          <p className="eyebrow">Today&apos;s fixture</p>
+          <p className="eyebrow">
+            {match.tournamentCode === "FIFA" ? "Today&apos;s football fixture" : "Today&apos;s fixture"}
+          </p>
           <h2>{match.title}</h2>
           <p className="support-copy">{match.subtitle}</p>
         </div>
@@ -141,7 +165,9 @@ function MatchPollCard({
         </p>
       ) : (
         <p className="support-copy">
-          Make your call before the voting window closes.
+          {match.tournamentCode === "FIFA"
+            ? "Back your side before kickoff. Multiple football fixtures can stay open at the same time."
+            : "Make your call before the voting window closes."}
         </p>
       )}
 
@@ -282,28 +308,37 @@ export default function PollsTodayPage() {
   }
 
   const favoriteTeam = getTeam(currentUser.favoriteTeamCode);
+  const heroFavoriteTeam = currentTournament === "IPL" ? favoriteTeam : undefined;
 
   return (
     <main className="page-shell">
       <section
-        className="panel-card panel-hero"
+        className={`panel-card panel-hero ${currentTournament === "FIFA" ? "panel-hero-fifa" : ""}`}
         style={{
-          background: favoriteTeam
-            ? `linear-gradient(135deg, ${favoriteTeam.primary}22, ${favoriteTeam.secondary}11), rgba(9, 23, 43, 0.8)`
+          background: heroFavoriteTeam
+            ? `linear-gradient(135deg, ${heroFavoriteTeam.primary}22, ${heroFavoriteTeam.secondary}11), rgba(9, 23, 43, 0.8)`
+            : currentTournament === "FIFA"
+              ? "linear-gradient(145deg, rgba(9, 76, 49, 0.9), rgba(4, 22, 31, 0.96))"
             : undefined
         }}
       >
         <div className="hero-with-brand">
           <div>
-            <p className="eyebrow">Today&apos;s poll room</p>
-            <h1>Real daily matches. Real vote windows.</h1>
+            <p className="eyebrow">
+              {currentTournament === "FIFA" ? "Football match centre" : "Today&apos;s poll room"}
+            </p>
+            <h1>
+              {currentTournament === "FIFA"
+                ? "Every football fixture stays in its own live voting window."
+                : "Real daily matches. Real vote windows."}
+            </h1>
             <p className="support-copy">
-              Your favorite team theme follows you across the experience, while
-              {` ${tournament?.shortName ?? "the active tournament"} `}
-              stays isolated with its own voting window and settlement flow.
+              {currentTournament === "FIFA"
+                ? "Football mode runs with its own fixture list, kickoff-based timers, and separate settlements. Cricket branding stays out of this view."
+                : `Your favorite team theme follows you across the cricket experience, while ${tournament?.shortName ?? "the active tournament"} stays isolated with its own voting window and settlement flow.`}
             </p>
           </div>
-          {favoriteTeam ? <TeamBrandBadge team={favoriteTeam} /> : null}
+          {heroFavoriteTeam ? <TeamBrandBadge team={heroFavoriteTeam} /> : null}
         </div>
         <div className="profile-chip-grid">
           <div className="profile-chip">
@@ -315,8 +350,12 @@ export default function PollsTodayPage() {
             <strong>{currentUser.publicId}</strong>
           </div>
           <div className="profile-chip">
-            <span>Favorite team</span>
-            <strong>{favoriteTeam?.name}</strong>
+            <span>{currentTournament === "FIFA" ? "Mode" : "Favorite team"}</span>
+            <strong>
+              {currentTournament === "FIFA"
+                ? "Football theme active"
+                : favoriteTeam?.name}
+            </strong>
           </div>
           <div className="profile-chip">
             <span>{tournament?.shortName} carry</span>

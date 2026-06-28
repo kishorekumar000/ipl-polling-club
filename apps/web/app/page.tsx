@@ -124,8 +124,8 @@ export default function HomePage() {
           <h1>Join the match club with your own profile.</h1>
           <p className="support-copy">
             Create your profile with your name, get a unique ID, then lock your
-            favorite IPL team on the next page. Then switch between {tournament?.shortName ?? "tournaments"}
-            without mixing settlements. Admin controls stay separate.
+            favorite cricket team on the next page. Then switch between {tournament?.shortName ?? "tournaments"}
+            without mixing votes or settlements. Admin controls stay separate.
           </p>
         </div>
 
@@ -211,8 +211,8 @@ export default function HomePage() {
           <p className="support-copy">
             Your unique ID is {currentUser.publicId}.
             {currentUser.favoriteTeamCode
-              ? " Your favorite team is already locked, so you can head straight to today's polls."
-              : " Your favorite team still needs to be locked on the next page."}
+              ? " Your team choice is already locked, so you can head straight to today's polls."
+              : " Your cricket team choice still needs to be locked on the next page."}
           </p>
           <div className="hero-actions">
             {!currentUser.favoriteTeamCode ? (

@@ -2,9 +2,9 @@ import type { MetadataRoute } from "next";
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: "IPL Polling Club",
-    short_name: "IPL Club",
-    description: "Daily IPL polling club with match alerts and admin control.",
+    name: "Match Polling Club",
+    short_name: "Match Club",
+    description: "Tournament polling club with match alerts and admin control.",
     start_url: "/",
     display: "standalone",
     background_color: "#041425",

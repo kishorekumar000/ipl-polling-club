@@ -1,5 +1,5 @@
 export const metadata = {
-  title: "Settlements | IPL Polling Club"
+  title: "Settlements | Match Polling Club"
 };
 
 export default function RootLayout({

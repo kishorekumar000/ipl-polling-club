@@ -5,6 +5,7 @@ import { FormEvent, useMemo, useState } from "react";
 import {
   countUsersByRole,
   getCarryBalance,
+  getDisplayTeam,
   getTeam,
   getTournament,
   IPL_TEAMS
@@ -45,6 +46,8 @@ export default function AdminPage() {
   const adminUser = state.users.find((user) => user.id === session?.userId);
   const adminFavoriteTeam =
     adminUser?.favoriteTeamCode ? getTeam(adminUser.favoriteTeamCode) : undefined;
+  const showAdminFavoriteTheme =
+    currentTournament === "IPL" ? adminFavoriteTeam : undefined;
   const isSuperAdmin = adminUser?.adminLevel === "super";
 
   const metrics = useMemo(
@@ -349,8 +352,10 @@ export default function AdminPage() {
       <section
         className="panel-card panel-hero"
         style={{
-          background: adminFavoriteTeam
-            ? `linear-gradient(135deg, ${adminFavoriteTeam.primary}22, ${adminFavoriteTeam.secondary}11), rgba(9, 23, 43, 0.8)`
+          background: showAdminFavoriteTheme
+            ? `linear-gradient(135deg, ${showAdminFavoriteTheme.primary}22, ${showAdminFavoriteTheme.secondary}11), rgba(9, 23, 43, 0.8)`
+            : currentTournament === "FIFA"
+              ? "linear-gradient(145deg, rgba(9, 76, 49, 0.9), rgba(4, 22, 31, 0.96))"
             : undefined
         }}
       >
@@ -364,7 +369,7 @@ export default function AdminPage() {
                 : "You are a supporting admin. You can access the admin area and join polls, but final control stays with the super admin."}
             </p>
           </div>
-          {adminFavoriteTeam ? <TeamBrandBadge team={adminFavoriteTeam} /> : null}
+          {showAdminFavoriteTheme ? <TeamBrandBadge team={showAdminFavoriteTheme} /> : null}
         </div>
         <div className="profile-chip-grid">
           <div className="profile-chip">
@@ -421,8 +426,24 @@ export default function AdminPage() {
         {loading ? <p className="support-copy">Loading today&apos;s fixtures...</p> : null}
         {error ? <p className="warning-text">{error}</p> : null}
         {todayMatches.map((match) => {
-          const homeTeam = getTeam(match.homeTeamCode);
-          const awayTeam = getTeam(match.awayTeamCode);
+          const homeTeam = getDisplayTeam(match.homeTeamCode, {
+            tournamentCode: match.tournamentCode,
+            name: match.homeTeamName,
+            shortName: match.homeTeamShortName,
+            logoPath: match.homeTeamLogoPath,
+            primary: match.homeTeamPrimary,
+            secondary: match.homeTeamSecondary,
+            accent: match.homeTeamAccent
+          });
+          const awayTeam = getDisplayTeam(match.awayTeamCode, {
+            tournamentCode: match.tournamentCode,
+            name: match.awayTeamName,
+            shortName: match.awayTeamShortName,
+            logoPath: match.awayTeamLogoPath,
+            primary: match.awayTeamPrimary,
+            secondary: match.awayTeamSecondary,
+            accent: match.awayTeamAccent
+          });
           const matchVotes = getVotesForMatch(state.votes, match.id);
           const finalTeams = getFinalTeams(match, matchVotes, state.users);
           const settlement = state.settlements.find(
