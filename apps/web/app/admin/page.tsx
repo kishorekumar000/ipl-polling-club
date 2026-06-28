@@ -356,7 +356,9 @@ export default function AdminPage() {
             ? `linear-gradient(135deg, ${showAdminFavoriteTheme.primary}22, ${showAdminFavoriteTheme.secondary}11), rgba(9, 23, 43, 0.8)`
             : currentTournament === "FIFA"
               ? "linear-gradient(145deg, rgba(9, 76, 49, 0.9), rgba(4, 22, 31, 0.96))"
-            : undefined
+              : currentTournament === "WT20"
+                ? "linear-gradient(145deg, rgba(100, 29, 120, 0.92), rgba(26, 8, 36, 0.98))"
+                : undefined
         }}
       >
         <div className="hero-with-brand">

@@ -77,7 +77,9 @@ function MatchPollCard({
     accent: match.awayTeamAccent
   });
 
-  const cardClassName = `poll-card ${match.tournamentCode === "FIFA" ? "poll-card-fifa" : ""}`;
+  const isFifa = match.tournamentCode === "FIFA";
+  const isWt20 = match.tournamentCode === "WT20";
+  const cardClassName = `poll-card ${isFifa ? "poll-card-fifa" : ""} ${isWt20 ? "poll-card-wt20" : ""}`;
 
   return (
     <article
@@ -85,9 +87,11 @@ function MatchPollCard({
       style={{
         background: showIplFavoriteTheme
           ? `linear-gradient(135deg, ${showIplFavoriteTheme.primary}22, ${showIplFavoriteTheme.secondary}11), rgba(7, 17, 31, 0.92)`
-          : match.tournamentCode === "FIFA"
+          : isFifa
             ? "linear-gradient(160deg, rgba(11, 68, 46, 0.88), rgba(3, 20, 29, 0.96))"
-          : undefined
+            : isWt20
+              ? "linear-gradient(160deg, rgba(66, 16, 92, 0.9), rgba(22, 6, 37, 0.96))"
+              : undefined
       }}
     >
       {showIplFavoriteTheme ? (
@@ -110,7 +114,11 @@ function MatchPollCard({
       <div className="match-heading">
         <div>
           <p className="eyebrow">
-            {match.tournamentCode === "FIFA" ? "Today&apos;s football fixture" : "Today&apos;s fixture"}
+            {isFifa
+              ? "Today&apos;s football fixture"
+              : isWt20
+                ? "Today&apos;s women&apos;s cricket fixture"
+                : "Today&apos;s fixture"}
           </p>
           <h2>{match.title}</h2>
           <p className="support-copy">{match.subtitle}</p>
@@ -165,9 +173,11 @@ function MatchPollCard({
         </p>
       ) : (
         <p className="support-copy">
-          {match.tournamentCode === "FIFA"
+          {isFifa
             ? "Back your side before kickoff. Multiple football fixtures can stay open at the same time."
-            : "Make your call before the voting window closes."}
+            : isWt20
+              ? "Back your side before the first ball. Every live women&apos;s match keeps its own open window."
+              : "Make your call before the voting window closes."}
         </p>
       )}
 
@@ -309,33 +319,45 @@ export default function PollsTodayPage() {
 
   const favoriteTeam = getTeam(currentUser.favoriteTeamCode);
   const heroFavoriteTeam = currentTournament === "IPL" ? favoriteTeam : undefined;
+  const isFifaTournament = currentTournament === "FIFA";
+  const isWt20Tournament = currentTournament === "WT20";
 
   return (
     <main className="page-shell">
       <section
-        className={`panel-card panel-hero ${currentTournament === "FIFA" ? "panel-hero-fifa" : ""}`}
+        className={`panel-card panel-hero ${isFifaTournament ? "panel-hero-fifa" : ""} ${isWt20Tournament ? "panel-hero-wt20" : ""}`}
         style={{
           background: heroFavoriteTeam
             ? `linear-gradient(135deg, ${heroFavoriteTeam.primary}22, ${heroFavoriteTeam.secondary}11), rgba(9, 23, 43, 0.8)`
-            : currentTournament === "FIFA"
+            : isFifaTournament
               ? "linear-gradient(145deg, rgba(9, 76, 49, 0.9), rgba(4, 22, 31, 0.96))"
-            : undefined
+              : isWt20Tournament
+                ? "linear-gradient(145deg, rgba(75, 18, 108, 0.92), rgba(23, 7, 34, 0.98))"
+                : undefined
         }}
       >
         <div className="hero-with-brand">
           <div>
             <p className="eyebrow">
-              {currentTournament === "FIFA" ? "Football match centre" : "Today&apos;s poll room"}
+              {isFifaTournament
+                ? "Football match centre"
+                : isWt20Tournament
+                  ? "Women&apos;s cricket match centre"
+                  : "Today&apos;s poll room"}
             </p>
             <h1>
-              {currentTournament === "FIFA"
+              {isFifaTournament
                 ? "Every football fixture stays in its own live voting window."
-                : "Real daily matches. Real vote windows."}
+                : isWt20Tournament
+                  ? "Every women&apos;s T20 match stays in its own live voting window."
+                  : "Real daily matches. Real vote windows."}
             </h1>
             <p className="support-copy">
-              {currentTournament === "FIFA"
+              {isFifaTournament
                 ? "Football mode runs with its own fixture list, kickoff-based timers, and separate settlements. Cricket branding stays out of this view."
-                : `Your favorite team theme follows you across the cricket experience, while ${tournament?.shortName ?? "the active tournament"} stays isolated with its own voting window and settlement flow.`}
+                : isWt20Tournament
+                  ? "Women&apos;s T20 mode runs on its own published fixture list, opens exactly three hours before each match, and keeps settlements fully separate from IPL and FIFA."
+                  : `Your favorite team theme follows you across the cricket experience, while ${tournament?.shortName ?? "the active tournament"} stays isolated with its own voting window and settlement flow.`}
             </p>
           </div>
           {heroFavoriteTeam ? <TeamBrandBadge team={heroFavoriteTeam} /> : null}
@@ -350,11 +372,13 @@ export default function PollsTodayPage() {
             <strong>{currentUser.publicId}</strong>
           </div>
           <div className="profile-chip">
-            <span>{currentTournament === "FIFA" ? "Mode" : "Favorite team"}</span>
+            <span>{isFifaTournament || isWt20Tournament ? "Mode" : "Favorite team"}</span>
             <strong>
-              {currentTournament === "FIFA"
+              {isFifaTournament
                 ? "Football theme active"
-                : favoriteTeam?.name}
+                : isWt20Tournament
+                  ? "Women&apos;s cricket theme active"
+                  : favoriteTeam?.name}
             </strong>
           </div>
           <div className="profile-chip">

@@ -9,7 +9,7 @@ import {
   VoteRecord
 } from "./club-types";
 
-const TOURNAMENT_ORDER: TournamentCode[] = ["IPL", "FIFA"];
+const TOURNAMENT_ORDER: TournamentCode[] = ["IPL", "FIFA", "WT20"];
 
 export function normalizeName(value: string) {
   return value.trim().toLowerCase().replace(/\s+/g, " ");
@@ -212,7 +212,8 @@ export function recomputeSettlements(state: AppState): AppState {
   const matches = [...state.matches].sort(compareMatches);
   const carryBalances: AppState["carryBalances"] = {
     IPL: state.carryBalances.IPL ?? 0,
-    FIFA: state.carryBalances.FIFA ?? 0
+    FIFA: state.carryBalances.FIFA ?? 0,
+    WT20: state.carryBalances.WT20 ?? 0
   };
 
   const settlements: SettlementRecord[] = matches.flatMap((match) => {

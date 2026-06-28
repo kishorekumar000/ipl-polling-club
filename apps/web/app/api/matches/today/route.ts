@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import {
   buildRivalryTitle,
+  getDisplayTeam,
   getTeam,
   getTeamCodeByName
 } from "../../../../lib/club-data";
@@ -10,9 +11,16 @@ import { MatchRecord, TeamCode, TournamentCode } from "../../../../lib/club-type
 const IPL_SCHEDULE_SOURCE_URL =
   "https://www.schedulefixtures.com/series/ipl-2026/511/schedule-fixtures";
 const IPL_SCHEDULE_TIMEOUT_MS = 8000;
+
 const FIFA_SCOREBOARD_BASE_URL =
   "https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.world/scoreboard";
 const FIFA_SCOREBOARD_TIMEOUT_MS = 8000;
+
+const WT20_WIKIPEDIA_PAGE_URL =
+  "https://en.wikipedia.org/wiki/2026_Women%27s_T20_World_Cup";
+const WT20_WIKIPEDIA_RAW_URL =
+  "https://en.wikipedia.org/w/index.php?title=2026_Women%27s_T20_World_Cup&action=raw";
+const WT20_SCHEDULE_TIMEOUT_MS = 8000;
 
 const MONTHS: Record<string, string> = {
   Jan: "01",
@@ -78,6 +86,31 @@ const FIFA_FALLBACK_FIXTURES: Record<
       awayTeamCode: "CRO",
       venue: "Hard Rock Stadium",
       startsAt: "2026-06-29T23:30:00+05:30"
+    }
+  ]
+};
+
+const WT20_FALLBACK_FIXTURES: Record<
+  string,
+  Array<{
+    homeTeamCode: TeamCode;
+    awayTeamCode: TeamCode;
+    venue: string;
+    startsAt: string;
+  }>
+> = {
+  "2026-06-28": [
+    {
+      homeTeamCode: "BAN",
+      awayTeamCode: "SA",
+      venue: "Lord's, London",
+      startsAt: "2026-06-28T15:00:00+05:30"
+    },
+    {
+      homeTeamCode: "IND",
+      awayTeamCode: "AUS",
+      venue: "Lord's, London",
+      startsAt: "2026-06-28T19:00:00+05:30"
     }
   ]
 };
@@ -253,7 +286,7 @@ function applyIplPollWindows(matches: MatchRecord[]) {
   });
 }
 
-function applyFifaPollWindows(matches: MatchRecord[]) {
+function applyThreeHourPollWindows(matches: MatchRecord[]) {
   return matches.map((match) => {
     const kickOff = new Date(match.startsAt).getTime();
     const openAt = new Date(kickOff - 3 * 60 * 60 * 1000);
@@ -296,8 +329,8 @@ function buildIplFallbackMatches(todayKey: string) {
 
   return applyIplPollWindows(
     fallbackFixtures.map((fixture, index) => {
-      const homeTeam = getTeam(fixture.homeTeamCode);
-      const awayTeam = getTeam(fixture.awayTeamCode);
+      const homeTeam = getTeam(fixture.homeTeamCode, "IPL");
+      const awayTeam = getTeam(fixture.awayTeamCode, "IPL");
 
       return {
         id: `ipl-${todayKey}-${fixture.homeTeamCode.toLowerCase()}-${fixture.awayTeamCode.toLowerCase()}`,
@@ -322,17 +355,21 @@ function buildIplFallbackMatches(todayKey: string) {
 function buildFifaFallbackMatches(todayKey: string) {
   const fixtures = FIFA_FALLBACK_FIXTURES[todayKey] ?? [];
 
-  return applyFifaPollWindows(
+  return applyThreeHourPollWindows(
     fixtures.map((fixture, index) => {
-      const homeTeam = getTeam(fixture.homeTeamCode);
-      const awayTeam = getTeam(fixture.awayTeamCode);
+      const homeTeam = getDisplayTeam(fixture.homeTeamCode, {
+        tournamentCode: "FIFA"
+      });
+      const awayTeam = getDisplayTeam(fixture.awayTeamCode, {
+        tournamentCode: "FIFA"
+      });
 
       return {
         id: `fifa-${todayKey}-${fixture.homeTeamCode.toLowerCase()}-${fixture.awayTeamCode.toLowerCase()}`,
         tournamentCode: "FIFA",
         dayKey: todayKey,
         title: buildRivalryTitle("FIFA", fixture.homeTeamCode, fixture.awayTeamCode),
-        subtitle: `${homeTeam?.shortName} vs ${awayTeam?.shortName} at ${fixture.venue}`,
+        subtitle: `${homeTeam.shortName} vs ${awayTeam.shortName} at ${fixture.venue}`,
         venue: fixture.venue,
         matchNumber: index + 1,
         homeTeamCode: fixture.homeTeamCode,
@@ -341,6 +378,38 @@ function buildFifaFallbackMatches(todayKey: string) {
         pollOpenAt: fixture.startsAt,
         pollLockAt: fixture.startsAt,
         sourceLabel: "Bundled FIFA World Cup showcase slate"
+      } satisfies MatchRecord;
+    })
+  );
+}
+
+function buildWt20FallbackMatches(todayKey: string) {
+  const fixtures = WT20_FALLBACK_FIXTURES[todayKey] ?? [];
+
+  return applyThreeHourPollWindows(
+    fixtures.map((fixture, index) => {
+      const homeTeam = getDisplayTeam(fixture.homeTeamCode, {
+        tournamentCode: "WT20"
+      });
+      const awayTeam = getDisplayTeam(fixture.awayTeamCode, {
+        tournamentCode: "WT20"
+      });
+
+      return {
+        id: `wt20-${todayKey}-${fixture.homeTeamCode.toLowerCase()}-${fixture.awayTeamCode.toLowerCase()}`,
+        tournamentCode: "WT20",
+        dayKey: todayKey,
+        title: buildRivalryTitle("WT20", fixture.homeTeamCode, fixture.awayTeamCode),
+        subtitle: `${homeTeam.name} vs ${awayTeam.name} at ${fixture.venue}`,
+        venue: fixture.venue,
+        matchNumber: index + 1,
+        homeTeamCode: fixture.homeTeamCode,
+        awayTeamCode: fixture.awayTeamCode,
+        startsAt: fixture.startsAt,
+        pollOpenAt: fixture.startsAt,
+        pollLockAt: fixture.startsAt,
+        sourceLabel: "Published Women's T20 World Cup schedule",
+        sourceUrl: WT20_WIKIPEDIA_PAGE_URL
       } satisfies MatchRecord;
     })
   );
@@ -431,6 +500,140 @@ function mapFifaEventToMatch(
   } satisfies MatchRecord;
 }
 
+function cleanWikiMarkup(value: string) {
+  return value
+    .replace(/\[\[([^|\]]+)\|([^\]]+)\]\]/g, "$2")
+    .replace(/\[\[([^\]]+)\]\]/g, "$1")
+    .replace(/'''+/g, "")
+    .replace(/''/g, "")
+    .replace(/<br\s*\/?>/gi, ", ")
+    .replace(/\{\{[^{}]+\|([^{}|]+)\}\}/g, "$1")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function parseWikiOffset(value: string) {
+  const match = value.trim().match(/^([+-])(\d{1,2})(?::(\d{2}))?$/);
+
+  if (!match) {
+    return 0;
+  }
+
+  const sign = match[1] === "-" ? -1 : 1;
+  const hours = Number(match[2]);
+  const minutes = Number(match[3] ?? "0");
+
+  return sign * (hours * 60 + minutes);
+}
+
+function parseWt20StartsAt(
+  year: string,
+  month: string,
+  day: string,
+  timeText: string,
+  offsetText: string
+) {
+  const [hourText, minuteText] = timeText.split(":");
+  const hour = Number(hourText);
+  const minute = Number(minuteText);
+
+  if (
+    Number.isNaN(hour) ||
+    Number.isNaN(minute) ||
+    !year ||
+    !month ||
+    !day ||
+    !offsetText
+  ) {
+    return null;
+  }
+
+  const utcMinutes =
+    hour * 60 + minute - parseWikiOffset(offsetText);
+  const utcDate = new Date(
+    Date.UTC(
+      Number(year),
+      Number(month) - 1,
+      Number(day),
+      0,
+      utcMinutes
+    )
+  );
+
+  return dateToIstIso(utcDate);
+}
+
+function parseWt20Fixtures(raw: string) {
+  const blocks = raw.split("{{Single-innings cricket match").slice(1);
+
+  return blocks.flatMap((block) => {
+    const year = extractText(
+      block.match(/\|\s*date\s*=\s*\{\{Start date\|df=y\|(\d{4})\|\d{2}\|\d{2}\}\}/i)
+    );
+    const month = extractText(
+      block.match(/\|\s*date\s*=\s*\{\{Start date\|df=y\|\d{4}\|(\d{2})\|\d{2}\}\}/i)
+    );
+    const day = extractText(
+      block.match(/\|\s*date\s*=\s*\{\{Start date\|df=y\|\d{4}\|\d{2}\|(\d{2})\}\}/i)
+    );
+    const timeText = extractText(
+      block.match(/\|\s*time\s*=\s*\{\{UTZ\|(\d{1,2}:\d{2})\|[+-]\d{1,2}(?::\d{2})?\}\}/i)
+    );
+    const offsetText = extractText(
+      block.match(/\|\s*time\s*=\s*\{\{UTZ\|\d{1,2}:\d{2}\|([+-]\d{1,2}(?::\d{2})?)\}\}/i)
+    );
+    const homeTeamCode = extractText(
+      block.match(/\|\s*team1\s*=\s*\{\{crw(?:-rt)?\|([A-Z]+)\}\}/i)
+    ).toUpperCase();
+    const awayTeamCode = extractText(
+      block.match(/\|\s*team2\s*=\s*\{\{crw(?:-rt)?\|([A-Z]+)\}\}/i)
+    ).toUpperCase();
+    const venue = cleanWikiMarkup(
+      extractText(block.match(/\|\s*venue\s*=\s*([^\n]+)/i))
+    );
+    const reportUrl = extractText(block.match(/\|\s*report\s*=\s*\[([^\s\]]+)/i));
+    const matchNumber = Number(extractText(block.match(/\|\s*round\s*=.*?(\d+)/i)) ?? 0);
+    const startsAt = parseWt20StartsAt(year, month, day, timeText, offsetText);
+
+    if (!homeTeamCode || !awayTeamCode || !startsAt) {
+      return [];
+    }
+
+    const dayKey = startsAt.slice(0, 10);
+    const homeTeam = getDisplayTeam(homeTeamCode, { tournamentCode: "WT20" });
+    const awayTeam = getDisplayTeam(awayTeamCode, { tournamentCode: "WT20" });
+
+    return [
+      {
+        id: `wt20-${dayKey}-${homeTeamCode.toLowerCase()}-${awayTeamCode.toLowerCase()}-${matchNumber || "fixture"}`,
+        tournamentCode: "WT20",
+        dayKey,
+        title: buildRivalryTitle("WT20", homeTeamCode, awayTeamCode),
+        subtitle: `${homeTeam.name} vs ${awayTeam.name}${venue ? ` at ${venue}` : ""}`,
+        venue: venue || "Women's T20 World Cup venue",
+        matchNumber,
+        homeTeamCode,
+        awayTeamCode,
+        homeTeamName: homeTeam.name,
+        awayTeamName: awayTeam.name,
+        homeTeamShortName: homeTeam.shortName,
+        awayTeamShortName: awayTeam.shortName,
+        homeTeamPrimary: homeTeam.primary,
+        awayTeamPrimary: awayTeam.primary,
+        homeTeamSecondary: homeTeam.secondary,
+        awayTeamSecondary: awayTeam.secondary,
+        homeTeamAccent: homeTeam.accent,
+        awayTeamAccent: awayTeam.accent,
+        startsAt,
+        pollOpenAt: startsAt,
+        pollLockAt: startsAt,
+        sourceLabel: "Published Women's T20 World Cup schedule",
+        sourceUrl: reportUrl || WT20_WIKIPEDIA_PAGE_URL
+      } satisfies MatchRecord
+    ];
+  });
+}
+
 async function getIplMatches(todayKey: string) {
   try {
     const response = await fetch(IPL_SCHEDULE_SOURCE_URL, {
@@ -448,8 +651,8 @@ async function getIplMatches(todayKey: string) {
     );
 
     return applyIplPollWindows(parsedFixtures).map((match) => {
-      const homeTeam = getTeam(match.homeTeamCode);
-      const awayTeam = getTeam(match.awayTeamCode);
+      const homeTeam = getTeam(match.homeTeamCode, "IPL");
+      const awayTeam = getTeam(match.awayTeamCode, "IPL");
 
       return {
         ...match,
@@ -508,22 +711,63 @@ async function getFifaMatches(todayKey: string) {
       return buildFifaFallbackMatches(todayKey);
     }
 
-    return applyFifaPollWindows(matches);
+    return applyThreeHourPollWindows(matches);
   } catch {
     return buildFifaFallbackMatches(todayKey);
+  }
+}
+
+async function getWt20Matches(todayKey: string) {
+  try {
+    const response = await fetch(WT20_WIKIPEDIA_RAW_URL, {
+      signal: AbortSignal.timeout(WT20_SCHEDULE_TIMEOUT_MS),
+      next: { revalidate: 3600 }
+    });
+
+    if (!response.ok) {
+      throw new Error(`WT20 schedule fetch failed with status ${response.status}`);
+    }
+
+    const raw = await response.text();
+    const matches = parseWt20Fixtures(raw)
+      .filter((match) => match.dayKey === todayKey)
+      .sort(
+        (left, right) =>
+          new Date(left.startsAt).getTime() - new Date(right.startsAt).getTime()
+      )
+      .map((match, index) => ({
+        ...match,
+        matchNumber: index + 1
+      }));
+
+    if (matches.length === 0) {
+      return buildWt20FallbackMatches(todayKey);
+    }
+
+    return applyThreeHourPollWindows(matches);
+  } catch {
+    return buildWt20FallbackMatches(todayKey);
   }
 }
 
 export async function GET(request: NextRequest) {
   const todayKey = getIstDayKey();
   const tournamentParam = request.nextUrl.searchParams.get("tournament");
-  const tournamentCode: TournamentCode =
-    tournamentParam === "FIFA" ? "FIFA" : "IPL";
+
+  let tournamentCode: TournamentCode = "IPL";
+
+  if (tournamentParam === "FIFA") {
+    tournamentCode = "FIFA";
+  } else if (tournamentParam === "WT20") {
+    tournamentCode = "WT20";
+  }
 
   const matches =
     tournamentCode === "FIFA"
       ? await getFifaMatches(todayKey)
-      : await getIplMatches(todayKey);
+      : tournamentCode === "WT20"
+        ? await getWt20Matches(todayKey)
+        : await getIplMatches(todayKey);
 
   return NextResponse.json({
     tournamentCode,

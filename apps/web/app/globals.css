@@ -108,6 +108,11 @@ input {
   --chip-secondary: #38bdf8;
 }
 
+:root[data-tournament="WT20"] {
+  --chip-primary: #f9a8d4;
+  --chip-secondary: #ffd166;
+}
+
 .club-user-chip {
   display: flex;
   flex-wrap: wrap;
@@ -277,6 +282,12 @@ input {
   background-size: auto, 100% 36px, 36px 100%;
 }
 
+.panel-hero-wt20 {
+  background-image:
+    radial-gradient(circle at top right, rgba(249, 168, 212, 0.14), transparent 28%),
+    radial-gradient(circle at 18% 20%, rgba(255, 209, 102, 0.12), transparent 26%);
+}
+
 .hero-with-brand {
   display: flex;
   flex-wrap: wrap;
@@ -297,13 +308,13 @@ input {
 h1 {
   margin: 0;
   max-width: 14ch;
-  font-size: clamp(2.1rem, 4.4vw, 3.6rem);
-  line-height: 1.02;
+  font-size: clamp(1.85rem, 3.6vw, 3rem);
+  line-height: 1.06;
 }
 
 h2 {
   margin: 0;
-  font-size: clamp(1.35rem, 2.5vw, 2rem);
+  font-size: clamp(1.2rem, 2vw, 1.75rem);
 }
 
 h3 {
@@ -572,6 +583,16 @@ h3 {
 
 .poll-card-fifa .eyebrow {
   color: #8af4d8;
+}
+
+.poll-card-wt20 {
+  background-image:
+    radial-gradient(circle at top right, rgba(255, 209, 102, 0.12), transparent 24%),
+    linear-gradient(160deg, rgba(88, 28, 135, 0.9), rgba(20, 7, 31, 0.96));
+}
+
+.poll-card-wt20 .eyebrow {
+  color: #ffd166;
 }
 
 .favorite-watermark {

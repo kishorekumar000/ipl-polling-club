@@ -46,7 +46,8 @@ function normalizeState(state: AppState) {
     })),
     carryBalances: {
       IPL: state.carryBalances?.IPL ?? (state as AppState & { carryBalance?: number }).carryBalance ?? 0,
-      FIFA: state.carryBalances?.FIFA ?? 0
+      FIFA: state.carryBalances?.FIFA ?? 0,
+      WT20: state.carryBalances?.WT20 ?? 0
     },
     appNotifications: state.appNotifications ?? []
   };
@@ -142,7 +143,7 @@ function readTournamentPreference() {
 
   const raw = window.localStorage.getItem(TOURNAMENT_KEY);
 
-  if (raw === "IPL" || raw === "FIFA") {
+  if (raw === "IPL" || raw === "FIFA" || raw === "WT20") {
     return raw;
   }
 

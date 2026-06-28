@@ -23,7 +23,8 @@ function createEmptyState() {
     settlements: [],
     carryBalances: {
       IPL: 0,
-      FIFA: 0
+      FIFA: 0,
+      WT20: 0
     },
     auditTrail: [],
     appNotifications: []
@@ -78,10 +79,17 @@ function normalizeState(payload: unknown) {
               "number"
                 ? ((candidate.carryBalances as Record<string, unknown>).FIFA as number)
                 : 0
+            ,
+            WT20:
+              typeof (candidate.carryBalances as Record<string, unknown>).WT20 ===
+              "number"
+                ? ((candidate.carryBalances as Record<string, unknown>).WT20 as number)
+                : 0
           }
         : {
             IPL: typeof candidate.carryBalance === "number" ? candidate.carryBalance : 0,
-            FIFA: 0
+            FIFA: 0,
+            WT20: 0
           },
     auditTrail: Array.isArray(candidate.auditTrail) ? candidate.auditTrail : [],
     appNotifications: Array.isArray(candidate.appNotifications)

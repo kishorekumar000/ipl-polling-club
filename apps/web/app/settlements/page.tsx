@@ -22,7 +22,9 @@ export default function SettlementsPage() {
 
   return (
     <main className="page-shell">
-      <section className={`panel-card panel-hero ${currentTournament === "FIFA" ? "panel-hero-fifa" : ""}`}>
+      <section
+        className={`panel-card panel-hero ${currentTournament === "FIFA" ? "panel-hero-fifa" : ""} ${currentTournament === "WT20" ? "panel-hero-wt20" : ""}`}
+      >
         <div>
           <p className="eyebrow">Settlement board</p>
           <h1>{tournament?.shortName ?? "Tournament"} settlements stay separate and visible.</h1>

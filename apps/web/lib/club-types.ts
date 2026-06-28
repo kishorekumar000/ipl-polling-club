@@ -1,6 +1,6 @@
 export type UserRole = "user" | "admin";
 export type AdminLevel = "super" | "standard";
-export type TournamentCode = "IPL" | "FIFA";
+export type TournamentCode = "IPL" | "FIFA" | "WT20";
 
 export type IplTeamCode =
   | "CSK"
@@ -57,7 +57,22 @@ export type FifaTeamCode =
   | "WAL"
   | string;
 
-export type TeamCode = IplTeamCode | FifaTeamCode;
+export type Wt20TeamCode =
+  | "AUS"
+  | "BAN"
+  | "ENG"
+  | "IND"
+  | "IRE"
+  | "NED"
+  | "NZ"
+  | "PAK"
+  | "SA"
+  | "SCO"
+  | "SL"
+  | "WI"
+  | string;
+
+export type TeamCode = IplTeamCode | FifaTeamCode | Wt20TeamCode;
 
 export type ClubTeam = {
   tournamentCode: TournamentCode;

@@ -33,6 +33,15 @@ export const TOURNAMENTS: Array<{
     primary: "#062349",
     secondary: "#0ea5e9",
     accent: "#7ef3d0"
+  },
+  {
+    code: "WT20",
+    name: "Women's T20 World Cup",
+    shortName: "Women's T20",
+    description: "International women's cricket winner polls",
+    primary: "#32144f",
+    secondary: "#ee5aa6",
+    accent: "#ffd166"
   }
 ];
 
@@ -596,7 +605,142 @@ export const FIFA_TEAMS: ClubTeam[] = [
   }
 ];
 
-export const ALL_TEAMS: ClubTeam[] = [...IPL_TEAMS, ...FIFA_TEAMS];
+export const WT20_TEAMS: ClubTeam[] = [
+  {
+    tournamentCode: "WT20",
+    code: "AUS",
+    name: "Australia Women",
+    shortName: "AUS-W",
+    nickname: "Southern Gold",
+    symbol: "Starlight",
+    primary: "#f0c33c",
+    secondary: "#0a6b3a",
+    accent: "#fff2a6"
+  },
+  {
+    tournamentCode: "WT20",
+    code: "BAN",
+    name: "Bangladesh Women",
+    shortName: "BAN-W",
+    nickname: "Tigresses",
+    symbol: "Stripe Crest",
+    primary: "#0a7a46",
+    secondary: "#b91c1c",
+    accent: "#f7d86c"
+  },
+  {
+    tournamentCode: "WT20",
+    code: "ENG",
+    name: "England Women",
+    shortName: "ENG-W",
+    nickname: "Rose Charge",
+    symbol: "Rose Crest",
+    primary: "#ffffff",
+    secondary: "#cf163f",
+    accent: "#123a8f"
+  },
+  {
+    tournamentCode: "WT20",
+    code: "IND",
+    name: "India Women",
+    shortName: "IND-W",
+    nickname: "Blue Sparks",
+    symbol: "Star Crest",
+    primary: "#17479e",
+    secondary: "#51b8ff",
+    accent: "#ffb703"
+  },
+  {
+    tournamentCode: "WT20",
+    code: "IRE",
+    name: "Ireland Women",
+    shortName: "IRE-W",
+    nickname: "Emerald Charge",
+    symbol: "Clover Crest",
+    primary: "#0a7a46",
+    secondary: "#ffffff",
+    accent: "#f29f05"
+  },
+  {
+    tournamentCode: "WT20",
+    code: "NED",
+    name: "Netherlands Women",
+    shortName: "NED-W",
+    nickname: "Orange Tide",
+    symbol: "Lion Crest",
+    primary: "#f97316",
+    secondary: "#ffffff",
+    accent: "#1d4ed8"
+  },
+  {
+    tournamentCode: "WT20",
+    code: "NZ",
+    name: "New Zealand Women",
+    shortName: "NZ-W",
+    nickname: "White Ferns",
+    symbol: "Fern Crest",
+    primary: "#111111",
+    secondary: "#ffffff",
+    accent: "#91f2d8"
+  },
+  {
+    tournamentCode: "WT20",
+    code: "PAK",
+    name: "Pakistan Women",
+    shortName: "PAK-W",
+    nickname: "Green Pulse",
+    symbol: "Star Stripe",
+    primary: "#0c7a43",
+    secondary: "#ffffff",
+    accent: "#d1f577"
+  },
+  {
+    tournamentCode: "WT20",
+    code: "SA",
+    name: "South Africa Women",
+    shortName: "SA-W",
+    nickname: "Proteas",
+    symbol: "Protea Crest",
+    primary: "#0c562e",
+    secondary: "#ffb81c",
+    accent: "#ffffff"
+  },
+  {
+    tournamentCode: "WT20",
+    code: "SCO",
+    name: "Scotland Women",
+    shortName: "SCO-W",
+    nickname: "Thistle Line",
+    symbol: "Thistle Crest",
+    primary: "#4c6ef5",
+    secondary: "#ffffff",
+    accent: "#d0bfff"
+  },
+  {
+    tournamentCode: "WT20",
+    code: "SL",
+    name: "Sri Lanka Women",
+    shortName: "SL-W",
+    nickname: "Island Flame",
+    symbol: "Lion Crest",
+    primary: "#0f3d91",
+    secondary: "#f6c453",
+    accent: "#7cc9f5"
+  },
+  {
+    tournamentCode: "WT20",
+    code: "WI",
+    name: "West Indies Women",
+    shortName: "WI-W",
+    nickname: "Maroon Storm",
+    symbol: "Palm Crest",
+    primary: "#7b1e3b",
+    secondary: "#f6c453",
+    accent: "#ffcad4"
+  }
+];
+
+export const ALL_TEAMS: ClubTeam[] = [...IPL_TEAMS, ...FIFA_TEAMS, ...WT20_TEAMS];
 
 const IPL_RIVALRY_TITLES: Record<string, string> = {
   "CSK-MI": "Southern Derby",
@@ -620,6 +764,14 @@ const FIFA_RIVALRY_TITLES: Record<string, string> = {
   "BRA-URU": "Copa Legacy Collision"
 };
 
+const WT20_RIVALRY_TITLES: Record<string, string> = {
+  "IND-AUS": "Heavyweights Under Lights",
+  "ENG-AUS": "Pace and Power Spotlight",
+  "IND-ENG": "Blue Fire Collision",
+  "NZ-WI": "Oceanic Storm Clash",
+  "SA-SL": "Protea Island Duel"
+};
+
 export const TEAM_NAME_TO_CODE: Record<string, TeamCode> = Object.fromEntries(
   ALL_TEAMS.map((team) => [team.name, team.code])
 ) as Record<string, TeamCode>;
@@ -632,7 +784,17 @@ export function getTeamsByTournament(tournamentCode: TournamentCode) {
   return ALL_TEAMS.filter((team) => team.tournamentCode === tournamentCode);
 }
 
-export function getTeam(teamCode: TeamCode) {
+export function getTeam(teamCode: TeamCode, tournamentCode?: TournamentCode) {
+  if (tournamentCode) {
+    const tournamentTeam = ALL_TEAMS.find(
+      (team) => team.code === teamCode && team.tournamentCode === tournamentCode
+    );
+
+    if (tournamentTeam) {
+      return tournamentTeam;
+    }
+  }
+
   return ALL_TEAMS.find((team) => team.code === teamCode);
 }
 
@@ -643,12 +805,21 @@ const FIFA_FALLBACK_PALETTES = [
   { primary: "#166534", secondary: "#1e293b", accent: "#bef264" }
 ];
 
-function pickFallbackPalette(seed: string) {
+const WT20_FALLBACK_PALETTES = [
+  { primary: "#6d28d9", secondary: "#1f1147", accent: "#f9a8d4" },
+  { primary: "#c0267d", secondary: "#3b0764", accent: "#fcd34d" },
+  { primary: "#7c3aed", secondary: "#111827", accent: "#fda4af" },
+  { primary: "#9d174d", secondary: "#2e1065", accent: "#fde68a" }
+];
+
+function pickFallbackPalette(seed: string, tournamentCode: TournamentCode) {
+  const palettes =
+    tournamentCode === "WT20" ? WT20_FALLBACK_PALETTES : FIFA_FALLBACK_PALETTES;
   const index =
     seed.split("").reduce((total, char) => total + char.charCodeAt(0), 0) %
-    FIFA_FALLBACK_PALETTES.length;
+    palettes.length;
 
-  return FIFA_FALLBACK_PALETTES[index];
+  return palettes[index];
 }
 
 export function getDisplayTeam(
@@ -660,16 +831,17 @@ export function getDisplayTeam(
     logoPath?: string;
   }
 ) {
-  const staticTeam = getTeam(teamCode);
+  const tournamentCode = options?.tournamentCode ?? "FIFA";
+  const staticTeam = getTeam(teamCode, tournamentCode);
 
   if (staticTeam) {
     return staticTeam;
   }
 
-  const palette = pickFallbackPalette(String(teamCode));
+  const palette = pickFallbackPalette(String(teamCode), tournamentCode);
 
   return {
-    tournamentCode: options?.tournamentCode ?? "FIFA",
+    tournamentCode,
     code: teamCode,
     name: options?.name ?? String(teamCode),
     shortName: options?.shortName ?? String(teamCode),
@@ -694,12 +866,18 @@ export function buildRivalryTitle(
   const directKey = `${homeTeamCode}-${awayTeamCode}`;
   const reverseKey = `${awayTeamCode}-${homeTeamCode}`;
   const rivalries =
-    tournamentCode === "FIFA" ? FIFA_RIVALRY_TITLES : IPL_RIVALRY_TITLES;
+    tournamentCode === "FIFA"
+      ? FIFA_RIVALRY_TITLES
+      : tournamentCode === "WT20"
+        ? WT20_RIVALRY_TITLES
+        : IPL_RIVALRY_TITLES;
+  const homeTeam = getTeam(homeTeamCode, tournamentCode);
+  const awayTeam = getTeam(awayTeamCode, tournamentCode);
 
   return (
     rivalries[directKey] ??
     rivalries[reverseKey] ??
-    `${homeTeamCode} vs ${awayTeamCode} Showdown`
+    `${homeTeam?.shortName ?? homeTeamCode} vs ${awayTeam?.shortName ?? awayTeamCode} Showdown`
   );
 }
 
@@ -711,7 +889,8 @@ export function createEmptyState(): AppState {
     settlements: [],
     carryBalances: {
       IPL: 0,
-      FIFA: 0
+      FIFA: 0,
+      WT20: 0
     },
     auditTrail: [],
     appNotifications: []

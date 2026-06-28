@@ -45,6 +45,15 @@ export function ClubHeader() {
       return;
     }
 
+    if (currentTournament === "WT20") {
+      root.style.setProperty("--bg-glow", "rgba(238, 90, 166, 0.22)");
+      root.style.setProperty("--bg-mist", "rgba(255, 209, 102, 0.16)");
+      root.style.setProperty("--bg-primary", "#14071f");
+      root.style.setProperty("--bg-secondary", "#2d0d3d");
+      root.style.setProperty("--bg-tertiary", "#1a0c28");
+      return;
+    }
+
     if (!favoriteTeam) {
       root.style.setProperty("--bg-glow", "rgba(72, 167, 255, 0.2)");
       root.style.setProperty("--bg-mist", "rgba(87, 214, 197, 0.14)");
