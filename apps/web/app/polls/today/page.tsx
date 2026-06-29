@@ -236,8 +236,14 @@ export default function PollsTodayPage() {
     updateState
   } = useClubStore();
   const { todayMatches, loading, error } = useDailyMatches(currentTournament);
+  const [now, setNow] = useState(new Date());
   const currentUser = state.users.find((user) => user.id === session?.userId);
   const tournament = getTournament(currentTournament);
+
+  useEffect(() => {
+    const intervalId = window.setInterval(() => setNow(new Date()), 1000);
+    return () => window.clearInterval(intervalId);
+  }, []);
 
   const handleVote = (matchId: string, teamCode: TeamCode) => {
     if (!currentUser) {
@@ -321,6 +327,12 @@ export default function PollsTodayPage() {
   const heroFavoriteTeam = currentTournament === "IPL" ? favoriteTeam : undefined;
   const isFifaTournament = currentTournament === "FIFA";
   const isWt20Tournament = currentTournament === "WT20";
+  const activeMatches = todayMatches.filter(
+    (match) => getMatchPhase(match, now) !== "locked"
+  );
+  const completedMatches = todayMatches.filter(
+    (match) => getMatchPhase(match, now) === "locked"
+  );
 
   return (
     <main className="page-shell">
@@ -392,7 +404,7 @@ export default function PollsTodayPage() {
       {error ? <p className="warning-text">{error}</p> : null}
 
       <section className="stack-list">
-        {todayMatches.map((match) => {
+        {activeMatches.map((match) => {
           const matchVotes = getVotesForMatch(state.votes, match.id);
           const settlement = state.settlements.find(
             (item) => item.matchId === match.id
@@ -411,7 +423,16 @@ export default function PollsTodayPage() {
             />
           );
         })}
-        {!loading && todayMatches.length === 0 ? (
+        {completedMatches.map((match) => (
+          <section className="panel-card" key={`completed-${match.id}`}>
+            <p className="eyebrow">Match completed</p>
+            <h2>{match.title}</h2>
+            <p className="support-copy">
+              This match was completed. Only fresh live polls stay in this room now.
+            </p>
+          </section>
+        ))}
+        {!loading && activeMatches.length === 0 && completedMatches.length === 0 ? (
           <section className="panel-card">
             <p className="eyebrow">No fixture today</p>
             <h2>There is no {tournament?.shortName ?? "active"} match synced for the current date.</h2>

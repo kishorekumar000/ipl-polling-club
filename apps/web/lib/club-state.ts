@@ -9,6 +9,9 @@ const STATE_KEY = "ipl-club-state-v4";
 const SESSION_KEY = "ipl-club-session-v3";
 const TOURNAMENT_KEY = "ipl-club-tournament-v1";
 const SHARED_STATE_ENDPOINT = "/api/shared-state";
+const STATE_SYNC_EVENT = "ipl-club:state-sync";
+const SESSION_SYNC_EVENT = "ipl-club:session-sync";
+const TOURNAMENT_SYNC_EVENT = "ipl-club:tournament-sync";
 
 function normalizeUsers(users: ClubUser[]): ClubUser[] {
   const adminUsers = users.filter((user) => user.role === "admin");
@@ -96,6 +99,42 @@ async function saveRemoteState(state: AppState) {
   }
 }
 
+function broadcastState(state: AppState) {
+  if (typeof window === "undefined") {
+    return;
+  }
+
+  window.dispatchEvent(
+    new CustomEvent<AppState>(STATE_SYNC_EVENT, {
+      detail: state
+    })
+  );
+}
+
+function broadcastSession(session: Session | null) {
+  if (typeof window === "undefined") {
+    return;
+  }
+
+  window.dispatchEvent(
+    new CustomEvent<Session | null>(SESSION_SYNC_EVENT, {
+      detail: session
+    })
+  );
+}
+
+function broadcastTournament(tournament: TournamentCode) {
+  if (typeof window === "undefined") {
+    return;
+  }
+
+  window.dispatchEvent(
+    new CustomEvent<TournamentCode>(TOURNAMENT_SYNC_EVENT, {
+      detail: tournament
+    })
+  );
+}
+
 function readState() {
   if (typeof window === "undefined") {
     return createEmptyState();
@@ -174,7 +213,84 @@ export function useClubStore() {
 
       setState(remoteState);
       window.localStorage.setItem(STATE_KEY, JSON.stringify(remoteState));
+      broadcastState(remoteState);
     });
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === "undefined") {
+      return;
+    }
+
+    const handleStateSync = (event: Event) => {
+      const nextState = (event as CustomEvent<AppState>).detail;
+
+      if (!nextState) {
+        return;
+      }
+
+      setState(recomputeSettlements(normalizeState(nextState)));
+    };
+
+    const handleSessionSync = (event: Event) => {
+      setSessionState((event as CustomEvent<Session | null>).detail ?? null);
+    };
+
+    const handleTournamentSync = (event: Event) => {
+      const nextTournament = (event as CustomEvent<TournamentCode>).detail;
+
+      if (nextTournament === "IPL" || nextTournament === "FIFA" || nextTournament === "WT20") {
+        setCurrentTournamentState(nextTournament);
+      }
+    };
+
+    const handleStorage = (event: StorageEvent) => {
+      if (event.key === STATE_KEY && event.newValue) {
+        try {
+          setState(
+            recomputeSettlements(normalizeState(JSON.parse(event.newValue) as AppState))
+          );
+        } catch {
+          // Ignore malformed cached state and keep the current in-memory copy.
+        }
+      }
+
+      if (event.key === SESSION_KEY) {
+        if (!event.newValue) {
+          setSessionState(null);
+          return;
+        }
+
+        try {
+          setSessionState(JSON.parse(event.newValue) as Session);
+        } catch {
+          setSessionState(null);
+        }
+      }
+
+      if (event.key === TOURNAMENT_KEY) {
+        const nextTournament = event.newValue;
+
+        if (nextTournament === "IPL" || nextTournament === "FIFA" || nextTournament === "WT20") {
+          setCurrentTournamentState(nextTournament);
+        }
+      }
+    };
+
+    window.addEventListener(STATE_SYNC_EVENT, handleStateSync as EventListener);
+    window.addEventListener(SESSION_SYNC_EVENT, handleSessionSync as EventListener);
+    window.addEventListener(TOURNAMENT_SYNC_EVENT, handleTournamentSync as EventListener);
+    window.addEventListener("storage", handleStorage);
+
+    return () => {
+      window.removeEventListener(STATE_SYNC_EVENT, handleStateSync as EventListener);
+      window.removeEventListener(SESSION_SYNC_EVENT, handleSessionSync as EventListener);
+      window.removeEventListener(
+        TOURNAMENT_SYNC_EVENT,
+        handleTournamentSync as EventListener
+      );
+      window.removeEventListener("storage", handleStorage);
+    };
   }, []);
 
   useEffect(() => {
@@ -191,6 +307,7 @@ export function useClubStore() {
 
       setState(remoteState);
       window.localStorage.setItem(STATE_KEY, JSON.stringify(remoteState));
+      broadcastState(remoteState);
     };
 
     const intervalId = window.setInterval(() => {
@@ -218,6 +335,7 @@ export function useClubStore() {
       if (typeof window !== "undefined") {
         window.localStorage.setItem(STATE_KEY, JSON.stringify(next));
         void saveRemoteState(next);
+        broadcastState(next);
       }
 
       return next;
@@ -233,10 +351,12 @@ export function useClubStore() {
 
     if (!nextSession) {
       window.localStorage.removeItem(SESSION_KEY);
+      broadcastSession(null);
       return;
     }
 
     window.localStorage.setItem(SESSION_KEY, JSON.stringify(nextSession));
+    broadcastSession(nextSession);
   };
 
   const setCurrentTournament = (nextTournament: TournamentCode) => {
@@ -247,6 +367,7 @@ export function useClubStore() {
     }
 
     window.localStorage.setItem(TOURNAMENT_KEY, nextTournament);
+    broadcastTournament(nextTournament);
   };
 
   return {

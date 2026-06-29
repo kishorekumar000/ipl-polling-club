@@ -156,7 +156,7 @@ export default function AdminPage() {
           id: `audit-${Date.now()}`,
           type: "admin-setup",
           actorName: trimmedName,
-          detail: `Created the super admin profile ${publicId} with fixed password ${SUPER_ADMIN_PASSWORD}.`,
+          detail: `Created the super admin profile ${publicId}.`,
           createdAt: now
         },
         ...current.auditTrail
@@ -236,8 +236,8 @@ export default function AdminPage() {
             <h1>Create your own admin profile.</h1>
             <p className="support-copy">
               The first admin becomes the super admin with full control. That
-              account can also vote as a participant in both tournament poll rooms. The super
-              admin password is fixed as {SUPER_ADMIN_PASSWORD}.
+              account can also vote as a participant in every tournament room,
+              while supporting admins can only be added later by promotion.
             </p>
           </div>
         </section>
@@ -285,9 +285,6 @@ export default function AdminPage() {
               </Link>
             </div>
             {formError ? <p className="warning-text">{formError}</p> : null}
-            <p className="support-copy">
-              Fixed super admin password: {SUPER_ADMIN_PASSWORD}
-            </p>
           </form>
         </section>
       </main>
@@ -327,7 +324,7 @@ export default function AdminPage() {
                 className="text-input"
                 id="login-password"
                 onChange={(event) => setLoginPassword(event.target.value)}
-                placeholder={SUPER_ADMIN_PASSWORD}
+                placeholder="Enter admin password"
                 type="password"
                 value={loginPassword}
               />

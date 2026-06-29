@@ -17,6 +17,14 @@ export function useDailyMatches(tournamentCode: TournamentCode) {
     }
 
     let isCancelled = false;
+    const todayKey = getIstDayKey();
+
+    setTodayMatches(
+      state.matches.filter(
+        (match) =>
+          match.dayKey === todayKey && match.tournamentCode === tournamentCode
+      )
+    );
 
     async function syncMatches() {
       try {
@@ -54,7 +62,6 @@ export function useDailyMatches(tournamentCode: TournamentCode) {
             : `Could not load today's ${tournamentCode} schedule.`
         );
 
-        const todayKey = getIstDayKey();
         setTodayMatches(
           state.matches.filter(
             (match) =>
