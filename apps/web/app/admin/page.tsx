@@ -1,30 +1,25 @@
 "use client";
 
 import Link from "next/link";
-import { FormEvent, useMemo, useState } from "react";
+import { useMemo } from "react";
 import {
   countUsersByRole,
   getCarryBalance,
   getDisplayTeam,
   getTeam,
-  getTournament,
-  IPL_TEAMS
+  getTournament
 } from "../../lib/club-data";
 import {
-  createPublicId,
   formatAmount,
   formatClock,
+  formatLongDate,
   getFinalTeams,
-  getVotesForMatch,
-  isNameTaken,
-  normalizeName
+  getVotesForMatch
 } from "../../lib/club-logic";
 import { useClubStore } from "../../lib/club-state";
 import { useDailyMatches } from "../../lib/use-daily-matches";
 import { TeamCode, UserRole } from "../../lib/club-types";
 import { TeamBrandBadge } from "../components/team-brand-badge";
-
-const SUPER_ADMIN_PASSWORD = "Kishore001@";
 
 export default function AdminPage() {
   const {
@@ -32,23 +27,19 @@ export default function AdminPage() {
     session,
     state,
     currentTournament,
-    updateState,
-    setSession
+    updateState
   } = useClubStore();
   const { todayMatches, loading, error } = useDailyMatches(currentTournament);
-  const [adminName, setAdminName] = useState("");
-  const [favoriteTeamCode, setFavoriteTeamCode] = useState<TeamCode | null>(null);
-  const [loginName, setLoginName] = useState("");
-  const [loginPassword, setLoginPassword] = useState("");
-  const [formError, setFormError] = useState("");
   const tournament = getTournament(currentTournament);
-  const adminProfiles = state.users.filter((user) => user.role === "admin");
   const adminUser = state.users.find((user) => user.id === session?.userId);
-  const adminFavoriteTeam =
-    adminUser?.favoriteTeamCode ? getTeam(adminUser.favoriteTeamCode) : undefined;
-  const showAdminFavoriteTheme =
-    currentTournament === "IPL" ? adminFavoriteTeam : undefined;
+  const isAdmin = adminUser?.role === "admin";
   const isSuperAdmin = adminUser?.adminLevel === "super";
+  const adminFavoriteTeam =
+    adminUser?.favoriteTeamCode && currentTournament === "IPL"
+      ? getDisplayTeam(adminUser.favoriteTeamCode, {
+          tournamentCode: "IPL"
+        })
+      : undefined;
 
   const metrics = useMemo(
     () => ({
@@ -86,12 +77,6 @@ export default function AdminPage() {
               ...user,
               role: nextRole,
               adminLevel: nextRole === "admin" ? "standard" : undefined,
-              password:
-                nextRole === "admin"
-                  ? user.adminLevel === "super"
-                    ? user.password
-                    : undefined
-                  : undefined,
               updatedAt: now
             }
           : user
@@ -109,86 +94,38 @@ export default function AdminPage() {
     }));
   };
 
-  const handleAdminSetup = (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-
-    const trimmedName = adminName.trim();
-
-    if (!trimmedName) {
-      setFormError("Enter your admin name first.");
+  const handleRemoveUser = (targetUserId: string) => {
+    if (!adminUser || !isSuperAdmin) {
       return;
     }
 
-    if (isNameTaken(state.users, trimmedName)) {
-      setFormError("That admin name already exists. Choose another.");
-      return;
-    }
+    const targetUser = state.users.find((user) => user.id === targetUserId);
 
-    if (!favoriteTeamCode) {
-      setFormError("Choose your favorite team for the admin profile.");
+    if (
+      !targetUser ||
+      targetUser.id === adminUser.id ||
+      targetUser.adminLevel === "super"
+    ) {
       return;
     }
 
     const now = new Date().toISOString();
-    const nextAdminId = `admin-${Date.now()}`;
-    const publicId = createPublicId(adminProfiles.length, "admin");
 
     updateState((current) => ({
       ...current,
-      users: [
-        ...current.users,
-        {
-          id: nextAdminId,
-          publicId,
-          name: trimmedName,
-          normalizedName: normalizeName(trimmedName),
-          role: "admin",
-          adminLevel: "super",
-          password: SUPER_ADMIN_PASSWORD,
-          favoriteTeamCode,
-          renameCount: 0,
-          createdAt: now,
-          updatedAt: now
-        }
-      ],
+      users: current.users.filter((user) => user.id !== targetUserId),
+      votes: current.votes.filter((vote) => vote.userId !== targetUserId),
       auditTrail: [
         {
           id: `audit-${Date.now()}`,
-          type: "admin-setup",
-          actorName: trimmedName,
-          detail: `Created the super admin profile ${publicId}.`,
+          type: "user-remove",
+          actorName: adminUser.name,
+          detail: `Removed ${targetUser.name} from the club.`,
           createdAt: now
         },
         ...current.auditTrail
       ].slice(0, 20)
     }));
-
-    setSession({
-      userId: nextAdminId,
-      role: "admin"
-    });
-    setFormError("");
-  };
-
-  const handleAdminLogin = (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-
-    const normalized = normalizeName(loginName);
-    const matchingAdmin = adminProfiles.find(
-      (profile) =>
-        profile.normalizedName === normalized && profile.adminLevel === "super"
-    );
-
-    if (!matchingAdmin || matchingAdmin.password !== loginPassword) {
-      setFormError("Super admin name or password is not correct.");
-      return;
-    }
-
-    setSession({
-      userId: matchingAdmin.id,
-      role: "admin"
-    });
-    setFormError("");
   };
 
   const handleDeclareWinner = (matchId: string, winnerTeamCode: TeamCode) => {
@@ -224,121 +161,54 @@ export default function AdminPage() {
   };
 
   if (!ready) {
-    return <main className="page-shell">Loading admin arena...</main>;
+    return <main className="page-shell">Loading admin workspace...</main>;
   }
 
-  if (adminProfiles.length === 0) {
+  if (!session || !adminUser) {
     return (
       <main className="page-shell">
         <section className="panel-card panel-hero">
           <div>
-            <p className="eyebrow">Admin setup</p>
-            <h1>Create your own admin profile.</h1>
+            <p className="eyebrow">Admin area</p>
+            <h1>Sign in with your normal member profile first.</h1>
             <p className="support-copy">
-              The first admin becomes the super admin with full control. That
-              account can also vote as a participant in every tournament room,
-              while supporting admins can only be added later by promotion.
+              The first registered member becomes super admin. Supporting admins
+              are normal users who were later promoted by the super admin.
             </p>
           </div>
         </section>
 
         <section className="panel-card">
-          <form className="stack-form" onSubmit={handleAdminSetup}>
-            <div className="field-block">
-              <label htmlFor="admin-name">Admin name</label>
-              <input
-                className="text-input"
-                id="admin-name"
-                onChange={(event) => setAdminName(event.target.value)}
-                placeholder="Enter your admin name"
-                type="text"
-                value={adminName}
-              />
-            </div>
-            <div className="field-block">
-              <span>Favorite team</span>
-              <div className="team-grid">
-                {IPL_TEAMS.map((team) => (
-                  <button
-                    className={`team-tile team-tile-detailed ${favoriteTeamCode === team.code ? "is-picked" : ""}`}
-                    key={team.code}
-                    onClick={() => setFavoriteTeamCode(team.code)}
-                    style={{
-                      borderColor: `${team.primary}88`,
-                      background: `linear-gradient(160deg, ${team.primary}2f, ${team.secondary}10)`
-                    }}
-                    type="button"
-                  >
-                    <strong>{team.shortName}</strong>
-                    <span>{team.nickname}</span>
-                    <small>{team.name}</small>
-                  </button>
-                ))}
-              </div>
-            </div>
-            <div className="hero-actions">
-              <button className="primary-link button-link" type="submit">
-                Create admin profile
-              </button>
-              <Link className="secondary-link" href="/">
-                Back to home
-              </Link>
-            </div>
-            {formError ? <p className="warning-text">{formError}</p> : null}
-          </form>
+          <div className="hero-actions">
+            <Link className="primary-link" href="/">
+              Go to home login
+            </Link>
+          </div>
         </section>
       </main>
     );
   }
 
-  if (!session || session.role !== "admin" || !adminUser) {
+  if (!isAdmin) {
     return (
       <main className="page-shell">
         <section className="panel-card panel-hero">
           <div>
-            <p className="eyebrow">Super admin login</p>
-            <h1>Admin controls stay separate from normal user pages.</h1>
+            <p className="eyebrow">Admin access required</p>
+            <h1>This profile is still a normal user.</h1>
             <p className="support-copy">
-              Only the super admin logs in here. Supporting admins become active
-              automatically after promotion when they use their normal profile.
+              Only the super admin can promote a normal member into supporting
+              admin access.
             </p>
           </div>
         </section>
 
         <section className="panel-card">
-          <form className="stack-form" onSubmit={handleAdminLogin}>
-            <div className="field-block">
-              <label htmlFor="login-name">Admin name</label>
-              <input
-                className="text-input"
-                id="login-name"
-                onChange={(event) => setLoginName(event.target.value)}
-                placeholder="Enter admin name"
-                type="text"
-                value={loginName}
-              />
-            </div>
-            <div className="field-block">
-              <label htmlFor="login-password">Password</label>
-              <input
-                className="text-input"
-                id="login-password"
-                onChange={(event) => setLoginPassword(event.target.value)}
-                placeholder="Enter admin password"
-                type="password"
-                value={loginPassword}
-              />
-            </div>
-            <div className="hero-actions">
-              <button className="primary-link button-link" type="submit">
-                Enter admin dashboard
-              </button>
-              <Link className="secondary-link" href="/">
-                Back to home
-              </Link>
-            </div>
-            {formError ? <p className="warning-text">{formError}</p> : null}
-          </form>
+          <div className="hero-actions">
+            <Link className="primary-link" href="/polls/today">
+              Back to polls
+            </Link>
+          </div>
         </section>
       </main>
     );
@@ -349,8 +219,8 @@ export default function AdminPage() {
       <section
         className="panel-card panel-hero"
         style={{
-          background: showAdminFavoriteTheme
-            ? `linear-gradient(135deg, ${showAdminFavoriteTheme.primary}22, ${showAdminFavoriteTheme.secondary}11), rgba(9, 23, 43, 0.8)`
+          background: adminFavoriteTeam
+            ? `linear-gradient(135deg, ${adminFavoriteTeam.primary}22, ${adminFavoriteTeam.secondary}11), rgba(9, 23, 43, 0.8)`
             : currentTournament === "FIFA"
               ? "linear-gradient(145deg, rgba(9, 76, 49, 0.9), rgba(4, 22, 31, 0.96))"
               : currentTournament === "WT20"
@@ -361,14 +231,18 @@ export default function AdminPage() {
         <div className="hero-with-brand">
           <div>
             <p className="eyebrow">Admin workspace</p>
-            <h1>Control the league and still vote as a participant.</h1>
+            <h1>
+              {isSuperAdmin
+                ? "You control the full club and every manual override."
+                : "You are a supporting admin with read-heavy access."}
+            </h1>
             <p className="support-copy">
               {isSuperAdmin
-                ? "You are the super admin, so you can edit the active tournament and choose supporting admins."
-                : "You are a supporting admin. You can access the admin area and join polls, but final control stays with the super admin."}
+                ? "Automatic match sync stays active, but you can still manually declare winners, promote admins, remove users, and inspect every joined member."
+                : "You can inspect the live club data and join polls as a normal participant, while super admin powers stay protected."}
             </p>
           </div>
-          {showAdminFavoriteTheme ? <TeamBrandBadge team={showAdminFavoriteTheme} /> : null}
+          {adminFavoriteTeam ? <TeamBrandBadge team={adminFavoriteTeam} /> : null}
         </div>
         <div className="profile-chip-grid">
           <div className="profile-chip">
@@ -394,8 +268,11 @@ export default function AdminPage() {
         <Link className="secondary-link" href="/polls/today">
           Join polls as participant
         </Link>
+        <Link className="secondary-link" href="/setup">
+          Open your profile
+        </Link>
         <Link className="secondary-link" href="/settlements">
-          Public settlement board
+          Open settlement board
         </Link>
       </nav>
 
@@ -411,12 +288,49 @@ export default function AdminPage() {
             <p className="support-copy">{metrics.admins}</p>
           </div>
           <div className="feature-card">
+            <strong>Total profiles</strong>
+            <p className="support-copy">{metrics.profiles}</p>
+          </div>
+          <div className="feature-card">
             <strong>{tournament?.shortName} carry balance</strong>
             <p className="support-copy">Rs {metrics.carry}</p>
           </div>
+        </div>
+      </section>
+
+      <section className="panel-card">
+        <p className="eyebrow">Manual control room</p>
+        <h2>Super admin controls stay above all automated flows.</h2>
+        <div className="timeline-grid">
           <div className="feature-card">
-            <strong>Votes recorded</strong>
-            <p className="support-copy">{metrics.votes}</p>
+            <strong>Automatic fixture sync</strong>
+            <p className="support-copy">
+              Real fixtures still load automatically for each tournament.
+            </p>
+          </div>
+          <div className="feature-card">
+            <strong>Manual winner declaration</strong>
+            <p className="support-copy">
+              {isSuperAdmin
+                ? "You can manually publish the winner for any synced match below."
+                : "Only the super admin can publish the winner manually."}
+            </p>
+          </div>
+          <div className="feature-card">
+            <strong>Admin promotion</strong>
+            <p className="support-copy">
+              {isSuperAdmin
+                ? "You can promote a normal user into supporting admin access."
+                : "Supporting admins cannot change roles."}
+            </p>
+          </div>
+          <div className="feature-card">
+            <strong>User removal</strong>
+            <p className="support-copy">
+              {isSuperAdmin
+                ? "You can remove any non-super-admin member and clear their votes."
+                : "Only the super admin can remove members."}
+            </p>
           </div>
         </div>
       </section>
@@ -445,9 +359,7 @@ export default function AdminPage() {
           });
           const matchVotes = getVotesForMatch(state.votes, match.id);
           const finalTeams = getFinalTeams(match, matchVotes, state.users);
-          const settlement = state.settlements.find(
-            (item) => item.matchId === match.id
-          );
+          const settlement = state.settlements.find((item) => item.matchId === match.id);
 
           return (
             <article className="panel-card" key={match.id}>
@@ -477,13 +389,13 @@ export default function AdminPage() {
 
               <div className="admin-snapshot-grid">
                 <div className="feature-card">
-                  <strong>{homeTeam?.shortName}</strong>
+                  <strong>{homeTeam.shortName}</strong>
                   <p className="support-copy">
                     {finalTeams[match.homeTeamCode].join(", ") || "No votes yet"}
                   </p>
                 </div>
                 <div className="feature-card">
-                  <strong>{awayTeam?.shortName}</strong>
+                  <strong>{awayTeam.shortName}</strong>
                   <p className="support-copy">
                     {finalTeams[match.awayTeamCode].join(", ") || "No votes yet"}
                   </p>
@@ -523,82 +435,90 @@ export default function AdminPage() {
       </section>
 
       <section className="panel-card">
-        <p className="eyebrow">Admin authority</p>
-        <h2>One top admin. Extra admins only by promotion.</h2>
-        <p className="support-copy">
-          Supporting admins can join the admin area, but only the super admin can
-          promote, demote, and publish match winners.
-        </p>
-        <div className="admin-list">
-          {state.users.map((user) => {
-            const authorityLabel =
-              user.role === "admin"
-                ? user.adminLevel === "super"
-                  ? "SUPER ADMIN"
-                  : "SUPPORTING ADMIN"
-                : "USER";
+        <p className="eyebrow">Joined users table</p>
+        <h2>See every member who has joined the club.</h2>
+        <div className="joined-user-table-wrap">
+          <table className="joined-user-table">
+            <thead>
+              <tr>
+                <th>Name</th>
+                <th>ID</th>
+                <th>Role</th>
+                <th>Favorite team</th>
+                <th>Joined date</th>
+                <th>Status</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {state.users.map((user) => {
+                const favoriteTeam = user.favoriteTeamCode
+                  ? getTeam(user.favoriteTeamCode)?.shortName ?? user.favoriteTeamCode
+                  : "Not set";
+                const roleLabel =
+                  user.role === "admin"
+                    ? user.adminLevel === "super"
+                      ? "Super admin"
+                      : "Supporting admin"
+                    : "User";
+                const canPromote = isSuperAdmin && user.role === "user";
+                const canDemote =
+                  isSuperAdmin &&
+                  user.role === "admin" &&
+                  user.adminLevel !== "super" &&
+                  user.id !== adminUser.id;
+                const canRemove =
+                  isSuperAdmin &&
+                  user.id !== adminUser.id &&
+                  user.adminLevel !== "super";
 
-            const canPromote = isSuperAdmin && user.role === "user";
-            const canDemote =
-              isSuperAdmin &&
-              user.role === "admin" &&
-              user.adminLevel !== "super" &&
-              user.id !== adminUser.id;
-
-            return (
-              <div className="admin-list-item" key={user.id}>
-                <strong>
-                  {user.name} | {user.publicId}
-                </strong>
-                <p className="support-copy">
-                  {authorityLabel} | Favorite team: {user.favoriteTeamCode ?? "Not chosen"}
-                </p>
-                {canPromote ? (
-                  <div className="hero-actions">
-                    <button
-                      className="secondary-link button-link"
-                      onClick={() => handleAdminRoleChange(user.id, "admin")}
-                      type="button"
-                    >
-                      Make supporting admin
-                    </button>
-                  </div>
-                ) : null}
-                {canDemote ? (
-                  <div className="hero-actions">
-                    <button
-                      className="secondary-link button-link"
-                      onClick={() => handleAdminRoleChange(user.id, "user")}
-                      type="button"
-                    >
-                      Remove admin access
-                    </button>
-                  </div>
-                ) : null}
-              </div>
-            );
-          })}
-        </div>
-      </section>
-
-      <section className="panel-card">
-        <p className="eyebrow">Profiles created so far</p>
-        <div className="admin-list">
-          {state.users.map((user) => (
-            <div className="admin-list-item" key={user.id}>
-              <strong>
-                {user.name} | {user.publicId}
-              </strong>
-              <p className="support-copy">
-                {user.role === "admin"
-                  ? user.adminLevel === "super"
-                    ? "SUPER ADMIN"
-                    : "SUPPORTING ADMIN"
-                  : "USER"}{" "}
-                | Favorite team: {user.favoriteTeamCode ?? "Not chosen"}
-              </p>
-            </div>
-          ))}
+                return (
+                  <tr key={user.id}>
+                    <td>{user.name}</td>
+                    <td>{user.publicId}</td>
+                    <td>{roleLabel}</td>
+                    <td>{favoriteTeam}</td>
+                    <td>{formatLongDate(user.createdAt)}</td>
+                    <td>Active</td>
+                    <td>
+                      <div className="table-actions">
+                        {canPromote ? (
+                          <button
+                            className="mini-link"
+                            onClick={() => handleAdminRoleChange(user.id, "admin")}
+                            type="button"
+                          >
+                            Promote
+                          </button>
+                        ) : null}
+                        {canDemote ? (
+                          <button
+                            className="mini-link"
+                            onClick={() => handleAdminRoleChange(user.id, "user")}
+                            type="button"
+                          >
+                            Demote
+                          </button>
+                        ) : null}
+                        {canRemove ? (
+                          <button
+                            className="mini-link danger-link"
+                            onClick={() => handleRemoveUser(user.id)}
+                            type="button"
+                          >
+                            Remove
+                          </button>
+                        ) : null}
+                        {!canPromote && !canDemote && !canRemove ? (
+                          <span className="timestamp-line">View only</span>
+                        ) : null}
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
         </div>
       </section>
     </main>

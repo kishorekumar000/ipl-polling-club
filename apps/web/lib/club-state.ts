@@ -19,16 +19,21 @@ function normalizeUsers(users: ClubUser[]): ClubUser[] {
   const firstAdminIndex = users.findIndex((item) => item.role === "admin");
 
   return users.map((user, index) => {
+    const baseUser = {
+      ...user,
+      password: user.password?.trim() ? user.password : user.publicId
+    };
+
     if (user.role !== "admin") {
-      return user;
+      return baseUser;
     }
 
     if (user.adminLevel) {
-      return user;
+      return baseUser;
     }
 
     return {
-      ...user,
+      ...baseUser,
       adminLevel:
         !hasSuperAdmin && index === firstAdminIndex ? "super" : "standard"
     };

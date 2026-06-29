@@ -20,12 +20,15 @@ export default function HomePage() {
   } = useClubStore();
   const { todayMatches, loading, error } = useDailyMatches(currentTournament);
   const [name, setName] = useState("");
+  const [joinPassword, setJoinPassword] = useState("");
+  const [confirmJoinPassword, setConfirmJoinPassword] = useState("");
   const [loginKey, setLoginKey] = useState("");
+  const [loginPassword, setLoginPassword] = useState("");
   const [joinError, setJoinError] = useState("");
   const [loginError, setLoginError] = useState("");
   const tournament = getTournament(currentTournament);
   const currentUser = state.users.find((user) => user.id === session?.userId);
-  const playerProfiles = state.users.filter((user) => user.role === "user");
+  const isFirstMember = state.users.length === 0;
 
   const handleJoin = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -42,9 +45,28 @@ export default function HomePage() {
       return;
     }
 
+    if (!joinPassword.trim()) {
+      setJoinError("Create a password for this profile.");
+      return;
+    }
+
+    if (joinPassword.length < 6) {
+      setJoinError("Use at least 6 characters for the password.");
+      return;
+    }
+
+    if (joinPassword !== confirmJoinPassword) {
+      setJoinError("Password and confirm password must match.");
+      return;
+    }
+
     const now = new Date().toISOString();
-    const nextUserId = `user-${Date.now()}`;
-    const publicId = createPublicId(playerProfiles.length, "user");
+    const role = isFirstMember ? "admin" : "user";
+    const nextUserId = `${role}-${Date.now()}`;
+    const publicId = createPublicId(
+      state.users.filter((user) => user.role === role).length,
+      role
+    );
 
     updateState((current) => ({
       ...current,
@@ -55,7 +77,9 @@ export default function HomePage() {
           publicId,
           name: trimmedName,
           normalizedName: normalizeName(trimmedName),
-          role: "user",
+          role,
+          adminLevel: isFirstMember ? "super" : undefined,
+          password: joinPassword,
           renameCount: 0,
           createdAt: now,
           updatedAt: now
@@ -64,9 +88,11 @@ export default function HomePage() {
       auditTrail: [
         {
           id: `audit-${Date.now()}`,
-          type: "join",
+          type: isFirstMember ? "super-admin-setup" : "join",
           actorName: trimmedName,
-          detail: `Created profile ${publicId}.`,
+          detail: isFirstMember
+            ? `Created the first member profile ${publicId} and activated super admin control.`
+            : `Created profile ${publicId}.`,
           createdAt: now
         },
         ...current.auditTrail
@@ -75,8 +101,11 @@ export default function HomePage() {
 
     setSession({
       userId: nextUserId,
-      role: "user"
+      role
     });
+    setName("");
+    setJoinPassword("");
+    setConfirmJoinPassword("");
     setJoinError("");
     setLoginError("");
     router.push("/setup/team");
@@ -92,15 +121,25 @@ export default function HomePage() {
       return;
     }
 
+    if (!loginPassword.trim()) {
+      setLoginError("Enter your password.");
+      return;
+    }
+
     const normalizedKey = normalizeName(trimmedKey);
-    const matchedUser = playerProfiles.find(
+    const matchedUser = state.users.find(
       (user) =>
         user.normalizedName === normalizedKey ||
         user.publicId.toLowerCase() === trimmedKey.toLowerCase()
     );
 
     if (!matchedUser) {
-      setLoginError("No user profile matched that name or ID.");
+      setLoginError("No profile matched that name or ID.");
+      return;
+    }
+
+    if ((matchedUser.password ?? "") !== loginPassword) {
+      setLoginError("Password is not correct for that profile.");
       return;
     }
 
@@ -108,6 +147,8 @@ export default function HomePage() {
       userId: matchedUser.id,
       role: matchedUser.role
     });
+    setLoginKey("");
+    setLoginPassword("");
     setJoinError("");
     setLoginError("");
   };
@@ -123,9 +164,10 @@ export default function HomePage() {
           <p className="eyebrow">User entrance</p>
           <h1>Join the match club with your own profile.</h1>
           <p className="support-copy">
-            Create your profile with your name, get a unique ID, then lock your
-            favorite cricket team on the next page. Then switch between {tournament?.shortName ?? "tournaments"}
-            without mixing votes or settlements. Admin controls stay separate.
+            Create your profile with your name and password, get a unique ID,
+            then lock your favorite cricket team on the next page. The very
+            first member becomes the super admin. Everyone after that joins as a
+            normal user until promoted.
           </p>
         </div>
 
@@ -149,7 +191,7 @@ export default function HomePage() {
         <>
           <section className="panel-card">
             <p className="eyebrow">Create profile</p>
-            <h2>Start with your name</h2>
+            <h2>{isFirstMember ? "Create the first member account" : "Start with your name"}</h2>
             <form className="stack-form" onSubmit={handleJoin}>
               <div className="field-block">
                 <label htmlFor="name">Display name</label>
@@ -162,12 +204,34 @@ export default function HomePage() {
                   value={name}
                 />
               </div>
+              <div className="field-block">
+                <label htmlFor="join-password">Password</label>
+                <input
+                  className="text-input"
+                  id="join-password"
+                  onChange={(event) => setJoinPassword(event.target.value)}
+                  placeholder="Create a password"
+                  type="password"
+                  value={joinPassword}
+                />
+              </div>
+              <div className="field-block">
+                <label htmlFor="join-password-confirm">Confirm password</label>
+                <input
+                  className="text-input"
+                  id="join-password-confirm"
+                  onChange={(event) => setConfirmJoinPassword(event.target.value)}
+                  placeholder="Confirm your password"
+                  type="password"
+                  value={confirmJoinPassword}
+                />
+              </div>
               <div className="hero-actions">
                 <button className="primary-link button-link" type="submit">
-                  Create profile
+                  {isFirstMember ? "Create super admin profile" : "Create profile"}
                 </button>
                 <Link className="secondary-link" href="/admin">
-                  Admin setup / login
+                  Admin area
                 </Link>
               </div>
               {joinError ? <p className="warning-text">{joinError}</p> : null}
@@ -175,12 +239,18 @@ export default function HomePage() {
                 Names are checked case-insensitively, so `Kishore` and `KISHORE`
                 cannot both exist.
               </p>
+              {isFirstMember ? (
+                <p className="warning-text">
+                  This first member account will become the super admin and can later
+                  promote other users into supporting admins.
+                </p>
+              ) : null}
             </form>
           </section>
 
-          {playerProfiles.length > 0 ? (
+          {state.users.length > 0 ? (
             <section className="panel-card">
-              <p className="eyebrow">Returning user</p>
+              <p className="eyebrow">Returning member</p>
               <h2>Sign back in without creating a duplicate profile.</h2>
               <form className="stack-form" onSubmit={handleLogin}>
                 <div className="field-block">
@@ -194,9 +264,20 @@ export default function HomePage() {
                     value={loginKey}
                   />
                 </div>
+                <div className="field-block">
+                  <label htmlFor="login-password">Password</label>
+                  <input
+                    className="text-input"
+                    id="login-password"
+                    onChange={(event) => setLoginPassword(event.target.value)}
+                    placeholder="Enter your password"
+                    type="password"
+                    value={loginPassword}
+                  />
+                </div>
                 <div className="hero-actions">
                   <button className="secondary-link button-link" type="submit">
-                    Open profile
+                    Sign in
                   </button>
                 </div>
                 {loginError ? <p className="warning-text">{loginError}</p> : null}

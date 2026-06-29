@@ -403,6 +403,51 @@ h3 {
   gap: 24px;
 }
 
+.joined-user-table-wrap {
+  margin-top: 24px;
+  overflow-x: auto;
+  border: 1px solid var(--panel-border);
+  border-radius: 22px;
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.joined-user-table {
+  width: 100%;
+  min-width: 860px;
+  border-collapse: collapse;
+}
+
+.joined-user-table th,
+.joined-user-table td {
+  padding: 16px 18px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  text-align: left;
+  vertical-align: middle;
+}
+
+.joined-user-table th {
+  color: var(--muted);
+  font-size: 0.78rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.joined-user-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.table-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+}
+
+.danger-link {
+  border-color: rgba(255, 98, 98, 0.35);
+  color: #ffb3b3;
+}
+
 .field-block {
   margin-top: 24px;
 }
