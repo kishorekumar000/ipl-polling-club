@@ -1,9 +1,37 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { getIstDayKey, upsertMatches } from "./club-logic";
+import { upsertMatches } from "./club-logic";
 import { useClubStore } from "./club-state";
 import { MatchRecord, TournamentCode } from "./club-types";
+
+const MATCH_LOOKAHEAD_MS = 6 * 60 * 60 * 1000;
+const MATCH_COMPLETED_GRACE_MS = 2 * 60 * 60 * 1000;
+
+function filterTournamentSlate(
+  matches: MatchRecord[],
+  tournamentCode: TournamentCode,
+  now = new Date()
+) {
+  const nowMs = now.getTime();
+  const lookAheadCutoff = nowMs + MATCH_LOOKAHEAD_MS;
+
+  return matches
+    .filter((match) => {
+      const openAt = new Date(match.pollOpenAt).getTime();
+      const lockAt = new Date(match.pollLockAt).getTime();
+
+      return (
+        match.tournamentCode === tournamentCode &&
+        openAt <= lookAheadCutoff &&
+        lockAt >= nowMs - MATCH_COMPLETED_GRACE_MS
+      );
+    })
+    .sort(
+      (left, right) =>
+        new Date(left.startsAt).getTime() - new Date(right.startsAt).getTime()
+    );
+}
 
 export function useDailyMatches(tournamentCode: TournamentCode) {
   const { ready, state, updateState } = useClubStore();
@@ -17,14 +45,7 @@ export function useDailyMatches(tournamentCode: TournamentCode) {
     }
 
     let isCancelled = false;
-    const todayKey = getIstDayKey();
-
-    setTodayMatches(
-      state.matches.filter(
-        (match) =>
-          match.dayKey === todayKey && match.tournamentCode === tournamentCode
-      )
-    );
+    setTodayMatches(filterTournamentSlate(state.matches, tournamentCode));
 
     async function syncMatches() {
       try {
@@ -59,15 +80,10 @@ export function useDailyMatches(tournamentCode: TournamentCode) {
         setError(
           caughtError instanceof Error
             ? caughtError.message
-            : `Could not load today's ${tournamentCode} schedule.`
+            : `Could not load the current ${tournamentCode} slate.`
         );
 
-        setTodayMatches(
-          state.matches.filter(
-            (match) =>
-              match.dayKey === todayKey && match.tournamentCode === tournamentCode
-          )
-        );
+        setTodayMatches(filterTournamentSlate(state.matches, tournamentCode));
       } finally {
         if (!isCancelled) {
           setLoading(false);

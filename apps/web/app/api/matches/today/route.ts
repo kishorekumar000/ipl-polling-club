@@ -21,6 +21,8 @@ const WT20_WIKIPEDIA_PAGE_URL =
 const WT20_WIKIPEDIA_RAW_URL =
   "https://en.wikipedia.org/w/index.php?title=2026_Women%27s_T20_World_Cup&action=raw";
 const WT20_SCHEDULE_TIMEOUT_MS = 8000;
+const MATCH_LOOKAHEAD_MS = 6 * 60 * 60 * 1000;
+const MATCH_COMPLETED_GRACE_MS = 2 * 60 * 60 * 1000;
 
 const MONTHS: Record<string, string> = {
   Jan: "01",
@@ -299,6 +301,26 @@ function applyThreeHourPollWindows(matches: MatchRecord[]) {
   });
 }
 
+function filterSlateMatches(matches: MatchRecord[], now = new Date()) {
+  const nowMs = now.getTime();
+  const lookAheadCutoff = nowMs + MATCH_LOOKAHEAD_MS;
+
+  return matches
+    .filter((match) => {
+      const openAt = new Date(match.pollOpenAt).getTime();
+      const lockAt = new Date(match.pollLockAt).getTime();
+
+      return (
+        openAt <= lookAheadCutoff &&
+        lockAt >= nowMs - MATCH_COMPLETED_GRACE_MS
+      );
+    })
+    .sort(
+      (left, right) =>
+        new Date(left.startsAt).getTime() - new Date(right.startsAt).getTime()
+    );
+}
+
 function buildIplFallbackMatches(todayKey: string) {
   const fallbackByDay: Record<
     string,
@@ -446,7 +468,6 @@ type EspnEvent = {
 
 function mapFifaEventToMatch(
   event: EspnEvent,
-  todayKey: string,
   index: number
 ): MatchRecord | null {
   const competition = event.competitions?.[0];
@@ -460,8 +481,9 @@ function mapFifaEventToMatch(
   const homeTeamCode = homeCompetitor?.team?.abbreviation?.toUpperCase();
   const awayTeamCode = awayCompetitor?.team?.abbreviation?.toUpperCase();
   const startsAt = event.date ? dateToIstIso(new Date(event.date)) : undefined;
+  const dayKey = startsAt?.slice(0, 10);
 
-  if (!homeTeamCode || !awayTeamCode || !startsAt || !startsAt.startsWith(todayKey)) {
+  if (!homeTeamCode || !awayTeamCode || !startsAt || !dayKey) {
     return null;
   }
 
@@ -469,9 +491,9 @@ function mapFifaEventToMatch(
   const awayTeamName = awayCompetitor?.team?.displayName ?? awayTeamCode;
 
   return {
-    id: `fifa-${event.id ?? `${todayKey}-${homeTeamCode}-${awayTeamCode}`}`,
+    id: `fifa-${event.id ?? `${dayKey}-${homeTeamCode}-${awayTeamCode}`}`,
     tournamentCode: "FIFA",
-    dayKey: todayKey,
+    dayKey,
     title: buildRivalryTitle("FIFA", homeTeamCode, awayTeamCode),
     subtitle: `${homeTeamName} vs ${awayTeamName}${competition?.venue?.fullName ? ` at ${competition.venue.fullName}` : ""}`,
     venue: competition?.venue?.fullName ?? "World Cup venue",
@@ -646,11 +668,9 @@ async function getIplMatches(todayKey: string) {
     }
 
     const html = await response.text();
-    const parsedFixtures = parseIplFixtures(html).filter(
-      (fixture) => fixture.dayKey === todayKey
-    );
+    const parsedFixtures = parseIplFixtures(html);
 
-    return applyIplPollWindows(parsedFixtures).map((match) => {
+    const matches = applyIplPollWindows(parsedFixtures).map((match) => {
       const homeTeam = getTeam(match.homeTeamCode, "IPL");
       const awayTeam = getTeam(match.awayTeamCode, "IPL");
 
@@ -659,8 +679,10 @@ async function getIplMatches(todayKey: string) {
         subtitle: `${homeTeam?.shortName} vs ${awayTeam?.shortName} at ${match.venue}`
       };
     });
+
+    return filterSlateMatches(matches);
   } catch {
-    return buildIplFallbackMatches(todayKey);
+    return filterSlateMatches(buildIplFallbackMatches(todayKey));
   }
 }
 
@@ -688,7 +710,7 @@ async function getFifaMatches(todayKey: string) {
     const seenMatchIds = new Set<string>();
 
     const matches = events
-      .map((event, index) => mapFifaEventToMatch(event, todayKey, index))
+      .map((event, index) => mapFifaEventToMatch(event, index))
       .filter((match): match is MatchRecord => Boolean(match))
       .filter((match) => {
         if (seenMatchIds.has(match.id)) {
@@ -708,12 +730,12 @@ async function getFifaMatches(todayKey: string) {
       }));
 
     if (matches.length === 0) {
-      return buildFifaFallbackMatches(todayKey);
+      return filterSlateMatches(buildFifaFallbackMatches(todayKey));
     }
 
-    return applyThreeHourPollWindows(matches);
+    return filterSlateMatches(applyThreeHourPollWindows(matches));
   } catch {
-    return buildFifaFallbackMatches(todayKey);
+    return filterSlateMatches(buildFifaFallbackMatches(todayKey));
   }
 }
 
@@ -730,7 +752,6 @@ async function getWt20Matches(todayKey: string) {
 
     const raw = await response.text();
     const matches = parseWt20Fixtures(raw)
-      .filter((match) => match.dayKey === todayKey)
       .sort(
         (left, right) =>
           new Date(left.startsAt).getTime() - new Date(right.startsAt).getTime()
@@ -741,12 +762,12 @@ async function getWt20Matches(todayKey: string) {
       }));
 
     if (matches.length === 0) {
-      return buildWt20FallbackMatches(todayKey);
+      return filterSlateMatches(buildWt20FallbackMatches(todayKey));
     }
 
-    return applyThreeHourPollWindows(matches);
+    return filterSlateMatches(applyThreeHourPollWindows(matches));
   } catch {
-    return buildWt20FallbackMatches(todayKey);
+    return filterSlateMatches(buildWt20FallbackMatches(todayKey));
   }
 }
 

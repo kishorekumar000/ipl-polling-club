@@ -4,7 +4,12 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { FormEvent, useState } from "react";
 import { countUsersByRole, getTournament } from "../lib/club-data";
-import { createPublicId, isNameTaken, normalizeName } from "../lib/club-logic";
+import {
+  createPublicId,
+  getMatchPhase,
+  isNameTaken,
+  normalizeName
+} from "../lib/club-logic";
 import { useClubStore } from "../lib/club-state";
 import { useDailyMatches } from "../lib/use-daily-matches";
 
@@ -29,6 +34,9 @@ export default function HomePage() {
   const tournament = getTournament(currentTournament);
   const currentUser = state.users.find((user) => user.id === session?.userId);
   const isFirstMember = state.users.length === 0;
+  const visibleMatches = todayMatches.filter(
+    (match) => getMatchPhase(match, new Date()) !== "locked"
+  );
 
   const handleJoin = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -181,8 +189,8 @@ export default function HomePage() {
             <strong>{countUsersByRole(state, "admin")}</strong>
           </div>
           <div className="profile-chip">
-            <span>{tournament?.shortName} today</span>
-            <strong>{todayMatches.length}</strong>
+            <span>{tournament?.shortName} live slate</span>
+            <strong>{visibleMatches.length}</strong>
           </div>
         </div>
       </section>
@@ -318,14 +326,14 @@ export default function HomePage() {
       )}
 
       <section className="panel-card">
-        <p className="eyebrow">Today&apos;s active tournament slate</p>
+        <p className="eyebrow">Current tournament slate</p>
         <h2>{tournament?.name ?? "Tournament"} polls stay on their own lane.</h2>
         {loading ? (
-          <p className="support-copy">Syncing today&apos;s schedule...</p>
+          <p className="support-copy">Syncing the current fixture window...</p>
         ) : null}
         {error ? <p className="warning-text">{error}</p> : null}
         <div className="timeline-grid">
-          {todayMatches.map((match) => (
+          {visibleMatches.map((match) => (
             <div className="feature-card" key={match.id}>
               <strong>{match.title}</strong>
               <p className="support-copy">{match.subtitle}</p>
@@ -335,12 +343,12 @@ export default function HomePage() {
               </p>
             </div>
           ))}
-          {!loading && todayMatches.length === 0 ? (
+          {!loading && visibleMatches.length === 0 ? (
             <div className="feature-card">
-              <strong>No {tournament?.shortName ?? "tournament"} match found for today</strong>
+              <strong>No fresh {tournament?.shortName ?? "tournament"} match is open right now</strong>
               <p className="support-copy">
-                Switch tournaments from the header any time. Each one keeps its
-                own fixtures, votes, and settlement flow separate.
+                Switch tournaments from the header any time. The next overnight
+                fixture will appear here automatically as its poll window gets close.
               </p>
             </div>
           ) : null}
