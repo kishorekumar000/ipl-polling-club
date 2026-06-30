@@ -45,10 +45,16 @@ export function useDailyMatches(tournamentCode: TournamentCode) {
     }
 
     let isCancelled = false;
+    let isRefreshing = false;
     setTodayMatches(filterTournamentSlate(state.matches, tournamentCode));
 
     async function syncMatches() {
+      if (isRefreshing) {
+        return;
+      }
+
       try {
+        isRefreshing = true;
         setLoading(true);
         const response = await fetch(`/api/matches/today?tournament=${tournamentCode}`, {
           cache: "no-store"
@@ -85,6 +91,7 @@ export function useDailyMatches(tournamentCode: TournamentCode) {
 
         setTodayMatches(filterTournamentSlate(state.matches, tournamentCode));
       } finally {
+        isRefreshing = false;
         if (!isCancelled) {
           setLoading(false);
         }
@@ -93,8 +100,13 @@ export function useDailyMatches(tournamentCode: TournamentCode) {
 
     void syncMatches();
 
+    const refreshInterval = window.setInterval(() => {
+      void syncMatches();
+    }, tournamentCode === "FIFA" ? 45000 : 120000);
+
     return () => {
       isCancelled = true;
+      window.clearInterval(refreshInterval);
     };
   }, [ready, tournamentCode]);
 

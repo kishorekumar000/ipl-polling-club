@@ -27,6 +27,44 @@ import { useClubStore } from "../../../lib/club-state";
 import { useDailyMatches } from "../../../lib/use-daily-matches";
 import { TeamBrandBadge } from "../../components/team-brand-badge";
 
+function hasScore(value?: number): value is number {
+  return typeof value === "number" && Number.isFinite(value);
+}
+
+function getScoreboardCopy(match: MatchRecord) {
+  const liveState = match.liveState ?? "scheduled";
+  const scoreLabel =
+    hasScore(match.homeScore) && hasScore(match.awayScore)
+      ? `${match.homeScore} - ${match.awayScore}`
+      : "vs";
+  const detail =
+    match.statusDetail ??
+    (liveState === "completed"
+      ? "Match completed"
+      : liveState === "live"
+        ? "Live on the pitch"
+        : liveState === "halftime"
+          ? "Break in play"
+          : `${formatClock(match.startsAt)} kickoff`);
+  const subDetail = [match.clockLabel, match.periodLabel].filter(Boolean).join(" • ");
+
+  return {
+    liveState,
+    detail,
+    scoreLabel,
+    subDetail,
+    statusLabel:
+      match.statusLabel ??
+      (liveState === "completed"
+        ? "Full time"
+        : liveState === "live"
+          ? "Live"
+          : liveState === "halftime"
+            ? "Half-time"
+            : "Scheduled")
+  };
+}
+
 function MatchPollCard({
   match,
   currentUserId,
@@ -57,6 +95,7 @@ function MatchPollCard({
   const currentVote = getVoteForUser(votes, currentUserId, match.id);
   const finalTeams = getFinalTeams(match, votes, users);
   const showIplFavoriteTheme = match.tournamentCode === "IPL" && favoriteTeam;
+  const scoreboard = getScoreboardCopy(match);
 
   const homeTeam = getDisplayTeam(match.homeTeamCode, {
     tournamentCode: match.tournamentCode,
@@ -134,6 +173,63 @@ function MatchPollCard({
           </div>
         </div>
       </div>
+
+      <section className="live-scoreboard">
+        <div className={`live-team-card ${match.homeTeamWinner ? "winner" : ""}`}>
+          <div
+            className="live-team-swatch"
+            style={{
+              background: `linear-gradient(160deg, ${homeTeam.primary}, ${homeTeam.secondary})`
+            }}
+          >
+            {homeTeam.logoPath ? (
+              <img alt={`${homeTeam.name} crest`} className="live-team-logo" src={homeTeam.logoPath} />
+            ) : (
+              <span>{homeTeam.symbol}</span>
+            )}
+          </div>
+          <div className="live-team-meta">
+            <strong>{homeTeam.shortName}</strong>
+            <span>{homeTeam.name}</span>
+          </div>
+          <div className="live-team-score">
+            {hasScore(match.homeScore) ? String(match.homeScore) : "-"}
+          </div>
+        </div>
+
+        <div className="live-score-center">
+          <span className={`live-state-pill state-${scoreboard.liveState}`}>
+            {scoreboard.statusLabel}
+          </span>
+          <strong className="live-scoreline">{scoreboard.scoreLabel}</strong>
+          <span className="live-score-detail">{scoreboard.detail}</span>
+          {scoreboard.subDetail ? (
+            <span className="live-score-subdetail">{scoreboard.subDetail}</span>
+          ) : null}
+        </div>
+
+        <div className={`live-team-card ${match.awayTeamWinner ? "winner" : ""}`}>
+          <div
+            className="live-team-swatch"
+            style={{
+              background: `linear-gradient(160deg, ${awayTeam.primary}, ${awayTeam.secondary})`
+            }}
+          >
+            {awayTeam.logoPath ? (
+              <img alt={`${awayTeam.name} crest`} className="live-team-logo" src={awayTeam.logoPath} />
+            ) : (
+              <span>{awayTeam.symbol}</span>
+            )}
+          </div>
+          <div className="live-team-meta">
+            <strong>{awayTeam.shortName}</strong>
+            <span>{awayTeam.name}</span>
+          </div>
+          <div className="live-team-score">
+            {hasScore(match.awayScore) ? String(match.awayScore) : "-"}
+          </div>
+        </div>
+      </section>
 
       <div className="poll-grid">
         {[homeTeam, awayTeam].map((team) => {

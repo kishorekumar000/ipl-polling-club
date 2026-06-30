@@ -447,6 +447,8 @@ function toHexColor(value?: string, fallback = "#115e59") {
 
 type EspnCompetitor = {
   homeAway?: "home" | "away";
+  score?: string;
+  winner?: boolean;
   team?: {
     abbreviation?: string;
     displayName?: string;
@@ -460,11 +462,66 @@ type EspnCompetitor = {
 type EspnEvent = {
   id?: string;
   date?: string;
+  status?: {
+    displayClock?: string;
+    period?: number;
+    type?: {
+      completed?: boolean;
+      description?: string;
+      detail?: string;
+      shortDetail?: string;
+      state?: string;
+    };
+  };
   competitions?: Array<{
     venue?: { fullName?: string };
     competitors?: EspnCompetitor[];
   }>;
 };
+
+function parseNumericScore(value?: string) {
+  if (!value) {
+    return undefined;
+  }
+
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : undefined;
+}
+
+function getFifaPeriodLabel(period?: number, state?: string) {
+  if (!period || state !== "in") {
+    return undefined;
+  }
+
+  if (period === 1) {
+    return "First half";
+  }
+
+  if (period === 2) {
+    return "Second half";
+  }
+
+  return `Period ${period}`;
+}
+
+function getFifaLiveState(event: EspnEvent): MatchRecord["liveState"] {
+  const state = event.status?.type?.state;
+  const detail = event.status?.type?.detail?.toLowerCase() ?? "";
+
+  if (event.status?.type?.completed) {
+    return "completed";
+  }
+
+  if (detail.includes("half")) {
+    return "halftime";
+  }
+
+  if (state === "in") {
+    return "live";
+  }
+
+  return "scheduled";
+}
 
 function mapFifaEventToMatch(
   event: EspnEvent,
@@ -482,6 +539,22 @@ function mapFifaEventToMatch(
   const awayTeamCode = awayCompetitor?.team?.abbreviation?.toUpperCase();
   const startsAt = event.date ? dateToIstIso(new Date(event.date)) : undefined;
   const dayKey = startsAt?.slice(0, 10);
+  const liveState = getFifaLiveState(event);
+  const statusLabel =
+    event.status?.type?.description ??
+    (liveState === "completed"
+      ? "Full time"
+      : liveState === "live"
+        ? "Live"
+        : liveState === "halftime"
+          ? "Half-time"
+          : "Scheduled");
+  const statusDetail =
+    event.status?.type?.detail ?? event.status?.type?.shortDetail ?? undefined;
+  const clockLabel = event.status?.displayClock || undefined;
+  const periodLabel = getFifaPeriodLabel(event.status?.period, event.status?.type?.state);
+  const homeScore = parseNumericScore(homeCompetitor?.score);
+  const awayScore = parseNumericScore(awayCompetitor?.score);
 
   if (!homeTeamCode || !awayTeamCode || !startsAt || !dayKey) {
     return null;
@@ -518,7 +591,16 @@ function mapFifaEventToMatch(
     pollOpenAt: startsAt,
     pollLockAt: startsAt,
     sourceLabel: "ESPN public FIFA World Cup scoreboard",
-    sourceUrl: `${FIFA_SCOREBOARD_BASE_URL}?dates=${startsAt.slice(0, 10).replaceAll("-", "")}`
+    sourceUrl: `${FIFA_SCOREBOARD_BASE_URL}?dates=${startsAt.slice(0, 10).replaceAll("-", "")}`,
+    liveState,
+    statusLabel,
+    statusDetail,
+    clockLabel,
+    periodLabel,
+    homeScore,
+    awayScore,
+    homeTeamWinner: homeCompetitor?.winner,
+    awayTeamWinner: awayCompetitor?.winner
   } satisfies MatchRecord;
 }
 

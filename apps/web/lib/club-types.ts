@@ -128,6 +128,15 @@ export type MatchRecord = {
   pollLockAt: string;
   sourceLabel?: string;
   sourceUrl?: string;
+  liveState?: "scheduled" | "live" | "halftime" | "completed";
+  statusLabel?: string;
+  statusDetail?: string;
+  clockLabel?: string;
+  periodLabel?: string;
+  homeScore?: number;
+  awayScore?: number;
+  homeTeamWinner?: boolean;
+  awayTeamWinner?: boolean;
   winnerTeamCode?: TeamCode;
   resultDeclaredAt?: string;
   resultDeclaredBy?: string;
