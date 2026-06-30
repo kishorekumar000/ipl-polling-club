@@ -168,7 +168,7 @@ function MatchPollCard({
         <p className="support-copy">
           You last backed {currentVote.teamCode} at {formatClock(currentVote.updatedAt)}.
           {phase === "open"
-            ? " You can switch sides until the deadline."
+            ? " You can switch sides until the deadline, or tap the same team again to remove your vote."
             : " Final teams are now locked for everyone."}
         </p>
       ) : (
@@ -258,17 +258,23 @@ export default function PollsTodayPage() {
         return current;
       }
 
+      const existingVote = current.votes.find(
+        (vote) => vote.userId === currentUser.id && vote.matchId === matchId
+      );
       const nextVotes = current.votes.filter(
         (vote) => !(vote.userId === currentUser.id && vote.matchId === matchId)
       );
+      const isRemovingVote = existingVote?.teamCode === teamCode;
 
-      nextVotes.push({
-        id: `vote-${currentUser.id}-${matchId}`,
-        userId: currentUser.id,
-        matchId,
-        teamCode,
-        updatedAt: now
-      });
+      if (!isRemovingVote) {
+        nextVotes.push({
+          id: `vote-${currentUser.id}-${matchId}`,
+          userId: currentUser.id,
+          matchId,
+          teamCode,
+          updatedAt: now
+        });
+      }
 
       return {
         ...current,
@@ -278,7 +284,9 @@ export default function PollsTodayPage() {
             id: `audit-${Date.now()}`,
             type: "vote",
             actorName: currentUser.name,
-            detail: `Backed ${teamCode} in ${match.title}.`,
+            detail: isRemovingVote
+              ? `Removed the vote in ${match.title}.`
+              : `Backed ${teamCode} in ${match.title}.`,
             createdAt: now
           },
           ...current.auditTrail
