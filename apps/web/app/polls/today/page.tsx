@@ -18,7 +18,6 @@ import {
 import {
   formatClock,
   getFinalTeams,
-  getMatchPhase,
   getVoteForUser,
   getVotesForMatch
 } from "../../../lib/club-logic";
@@ -28,25 +27,21 @@ import { TeamBrandBadge } from "../../components/team-brand-badge";
 
 function MatchPollCard({
   match,
+  now,
   currentUserId,
   favoriteTeamCode,
   onVote,
   votes
 }: {
   match: MatchRecord;
+  now: Date;
   currentUserId: string;
   favoriteTeamCode?: TeamCode;
   onVote: (matchId: string, teamCode: TeamCode) => void;
   votes: VoteRecord[];
 }) {
-  const [now, setNow] = useState(new Date());
-
-  useEffect(() => {
-    const interval = window.setInterval(() => setNow(new Date()), 30000);
-    return () => window.clearInterval(interval);
-  }, []);
-
-  const phase = getMatchPhase(match, now);
+  const phase =
+    new Date(match.pollLockAt).getTime() <= now.getTime() ? "locked" : "open";
   const currentVote = getVoteForUser(votes, currentUserId, match.id);
   const favoriteTeam = favoriteTeamCode ? getTeam(favoriteTeamCode) : undefined;
   const showIplFavoriteTheme = match.tournamentCode === "IPL" && favoriteTeam;
@@ -99,9 +94,7 @@ function MatchPollCard({
       ) : null}
 
       <div className="match-topline">
-        <span className={`status-pill status-${phase}`}>
-          {phase === "open" ? "Voting open" : "Queued next"}
-        </span>
+        <span className={`status-pill status-${phase}`}>Voting open</span>
         <span className="countdown-value">Deadline {formatClock(match.pollLockAt)}</span>
       </div>
 
@@ -143,7 +136,7 @@ function MatchPollCard({
                 background: `linear-gradient(160deg, ${team.primary}33, ${team.secondary}11)`
               }}
               type="button"
-              disabled={phase !== "open"}
+              disabled={phase === "locked"}
             >
               <span className="team-symbol">{team.symbol}</span>
               <span className="team-code">{team.shortName}</span>
@@ -158,9 +151,7 @@ function MatchPollCard({
       <p className="support-copy">
         {currentVote
           ? `You backed ${currentVote.teamCode}. Tap the same team again to remove it, or switch sides before the deadline.`
-          : phase === "open"
-            ? "Choose one side before the deadline hits."
-            : "This match is next in line. Voting opens automatically three hours before the start time."}
+          : "Choose one side before the deadline hits."}
       </p>
     </article>
   );
@@ -276,7 +267,7 @@ export default function PollsTodayPage() {
       const createdAt = new Date().toISOString();
       const match = current.matches.find((item) => item.id === matchId);
 
-      if (!match || getMatchPhase(match, new Date()) !== "open") {
+      if (!match || new Date(match.pollLockAt).getTime() <= Date.now()) {
         return current;
       }
 
@@ -327,10 +318,10 @@ export default function PollsTodayPage() {
   );
 
   const freshPollMatches = sortedMatches
-    .filter((match) => getMatchPhase(match, now) !== "locked")
-    .slice(0, 3);
+    .filter((match) => new Date(match.pollLockAt).getTime() > now.getTime())
+    .slice(0, 4);
   const finalTeamMatches = sortedMatches.filter(
-    (match) => getMatchPhase(match, now) === "locked"
+    (match) => new Date(match.pollLockAt).getTime() <= now.getTime()
   );
 
   if (!ready) {
@@ -399,9 +390,9 @@ export default function PollsTodayPage() {
                   : "Only the next cricket polls stay in front."}
             </h1>
             <p className="support-copy">
-              This room now shows only the next three live poll opportunities.
-              Once a match reaches its deadline, the vote card leaves the queue
-              and its final team sheet appears below.
+              This room now keeps the next fresh polls open until each match hits
+              its own deadline. Once a deadline is reached, that poll leaves the
+              top section and its final team sheet appears below.
             </p>
           </div>
           {heroFavoriteTeam ? <TeamBrandBadge team={heroFavoriteTeam} /> : null}
@@ -437,14 +428,15 @@ export default function PollsTodayPage() {
               favoriteTeamCode={currentUser.favoriteTeamCode}
               key={match.id}
               match={match}
+              now={now}
               onVote={handleVote}
               votes={getVotesForMatch(state.votes, match.id)}
             />
           ))
         ) : !loading ? (
           <section className="panel-card">
-            <p className="eyebrow">No fresh poll in queue</p>
-            <h2>There is no open or upcoming {tournament?.shortName} poll in the current slate.</h2>
+            <p className="eyebrow">No fresh poll</p>
+            <h2>There is no active {tournament?.shortName} poll in the current slate.</h2>
           </section>
         ) : null}
       </section>

@@ -22,13 +22,15 @@ function readBoolean(value: unknown) {
   return typeof value === "boolean" ? value : false;
 }
 
-function compact<T>(values: Array<T | null | undefined | false>) {
-  return values.filter(Boolean) as T[];
-}
-
 function extractEventId(matchId: string) {
   const value = matchId.replace(/^fifa-/, "").trim();
   return /^\d+$/.test(value) ? value : "";
+}
+
+function formatStatLabel(value: string) {
+  return value
+    .replace(/([a-z])([A-Z])/g, "$1 $2")
+    .replace(/^\w/, (letter) => letter.toUpperCase());
 }
 
 function buildTimeLabel(play: GenericRecord) {
@@ -37,7 +39,7 @@ function buildTimeLabel(play: GenericRecord) {
     readString(asRecord(play.period).displayValue) ||
     readString(asRecord(play.type).text);
 
-  return [clockLabel, periodLabel].filter(Boolean).join(" • ");
+  return [clockLabel, periodLabel].filter(Boolean).join(" - ");
 }
 
 function mapPlayItem(play: GenericRecord) {
@@ -62,6 +64,25 @@ function extractUpdates(summary: GenericRecord) {
     .map((play) => mapPlayItem(asRecord(play)));
 }
 
+function extractScorers(summary: GenericRecord, updates: ReturnType<typeof extractUpdates>) {
+  const scoringPlays = asArray(summary.scoringPlays)
+    .map((play) => mapPlayItem(asRecord(play)))
+    .filter((item) => item.text);
+
+  if (scoringPlays.length) {
+    return scoringPlays.reverse();
+  }
+
+  return filterUpdates(
+    updates,
+    (text) =>
+      text.includes("goal") ||
+      text.includes("scored") ||
+      text.includes("penalty") ||
+      text.includes("own goal")
+  );
+}
+
 function filterUpdates(
   updates: ReturnType<typeof extractUpdates>,
   matcher: (lowerText: string) => boolean
@@ -77,7 +98,7 @@ function extractTeamStats(summary: GenericRecord) {
       .filter((item) => readString(item.displayValue))
       .slice(0, 8)
       .map((item) => ({
-        label: readString(item.displayName) || readString(item.name),
+        label: formatStatLabel(readString(item.displayName) || readString(item.name)),
         value: readString(item.displayValue)
       }));
 
@@ -199,15 +220,13 @@ export async function GET(request: NextRequest) {
 
     const summary = (await response.json()) as GenericRecord;
     const updates = extractUpdates(summary);
+    const scorers = extractScorers(summary, updates);
 
     return NextResponse.json({
       ok: true,
       detail: {
         updates,
-        scorers: filterUpdates(
-          updates,
-          (text) => text.includes("goal") || text.includes("scored")
-        ),
+        scorers,
         cards: filterUpdates(
           updates,
           (text) => text.includes("yellow card") || text.includes("red card")

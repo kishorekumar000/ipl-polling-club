@@ -184,31 +184,11 @@ export default function LiveScorecardPage() {
       <section className="panel-card panel-hero live-hero">
         <div>
           <p className="eyebrow">Live scorecard</p>
-          <h1>
-            {tournament?.shortName} live matches run in their own score centre.
-          </h1>
+          <h1>{tournament?.shortName} live score centre</h1>
           <p className="support-copy">
-            Poll cards stay clean now. Open any match here to track the live score,
-            status, updates, lineups, scorers, cards, and broadcast details in one place.
+            Open any match here to follow the score, match status, events, lineups,
+            and available team stats in one clean place.
           </p>
-        </div>
-        <div className="profile-chip-grid">
-          <div className="profile-chip">
-            <span>Tournament</span>
-            <strong>{tournament?.shortName}</strong>
-          </div>
-          <div className="profile-chip">
-            <span>Matches in slate</span>
-            <strong>{liveSlate.length}</strong>
-          </div>
-          <div className="profile-chip">
-            <span>Auto refresh</span>
-            <strong>45 sec</strong>
-          </div>
-          <div className="profile-chip">
-            <span>Details mode</span>
-            <strong>{currentTournament === "FIFA" ? "Rich live feed" : "Fixture feed"}</strong>
-          </div>
         </div>
       </section>
 
@@ -313,7 +293,7 @@ export default function LiveScorecardPage() {
                   <>
                     <div className="section-heading">
                       <div>
-                        <p className="eyebrow">Google-style match centre</p>
+                        <p className="eyebrow">Match centre</p>
                         <h2>{selectedMatch.title}</h2>
                         <p className="support-copy">{selectedMatch.subtitle}</p>
                       </div>
@@ -347,153 +327,87 @@ export default function LiveScorecardPage() {
 
                     {detail?.note ? <p className="support-copy">{detail.note}</p> : null}
 
-                    <div className="live-detail-grid">
-                      <section className="feature-card">
-                        <strong>Key updates</strong>
-                        <div className="match-detail-list">
-                          {(detail?.updates?.length ? detail.updates : []).slice(0, 8).map((item) => (
-                            <div className="match-detail-item" key={item.id}>
-                              <span>{item.timeLabel || "Update"}</span>
-                              <strong>{item.text}</strong>
-                            </div>
-                          ))}
-                          {!detail?.updates?.length ? (
-                            <p className="support-copy">
-                              Live event updates will appear here as the feed refreshes.
-                            </p>
-                          ) : null}
-                        </div>
-                      </section>
+                    {(() => {
+                      const matchEvents = [
+                        ...(detail?.scorers ?? []),
+                        ...(detail?.cards ?? []),
+                        ...(detail?.substitutions ?? []),
+                        ...(detail?.updates ?? [])
+                      ].reduce<LiveUpdate[]>((items, event) => {
+                        if (items.some((item) => item.id === event.id && item.text === event.text)) {
+                          return items;
+                        }
 
-                      <section className="feature-card">
-                        <strong>Match events</strong>
-                        <div className="event-chip-grid">
-                          <div className="event-chip">
-                            <span>Goal scorers</span>
-                            <strong>{detail?.scorers?.length ?? 0}</strong>
-                          </div>
-                          <div className="event-chip">
-                            <span>Cards</span>
-                            <strong>{detail?.cards?.length ?? 0}</strong>
-                          </div>
-                          <div className="event-chip">
-                            <span>Subs</span>
-                            <strong>{detail?.substitutions?.length ?? 0}</strong>
-                          </div>
-                          <div className="event-chip">
-                            <span>Broadcasts</span>
-                            <strong>{detail?.broadcasts?.length ?? 0}</strong>
-                          </div>
-                        </div>
-                      </section>
-                    </div>
+                        items.push(event);
+                        return items;
+                      }, []);
 
-                    <div className="live-detail-grid">
-                      <section className="feature-card">
-                        <strong>Goal scorers</strong>
-                        <div className="match-detail-list">
-                          {detail?.scorers?.length ? (
-                            detail.scorers.map((item) => (
-                              <div className="match-detail-item" key={`goal-${item.id}`}>
-                                <span>{item.timeLabel || item.teamCode || "Goal"}</span>
-                                <strong>{item.text}</strong>
-                              </div>
-                            ))
-                          ) : (
-                            <p className="support-copy">No goal-scoring update has landed yet.</p>
-                          )}
-                        </div>
-                      </section>
-
-                      <section className="feature-card">
-                        <strong>Cards and substitutions</strong>
-                        <div className="match-detail-list">
-                          {[...(detail?.cards ?? []), ...(detail?.substitutions ?? [])].length ? (
-                            [...(detail?.cards ?? []), ...(detail?.substitutions ?? [])].map((item) => (
-                              <div className="match-detail-item" key={`event-${item.id}`}>
-                                <span>{item.timeLabel || item.teamCode || "Event"}</span>
-                                <strong>{item.text}</strong>
-                              </div>
-                            ))
-                          ) : (
-                            <p className="support-copy">Cards and subs will show here once the feed posts them.</p>
-                          )}
-                        </div>
-                      </section>
-                    </div>
-
-                    <section className="feature-card">
-                      <strong>Lineups</strong>
-                      <div className="lineup-grid">
-                        {detail?.lineups?.length ? (
-                          detail.lineups.map((group) => (
-                            <article className="lineup-card" key={group.teamCode}>
-                              <h3>{group.teamName || group.teamCode}</h3>
-                              <p className="timestamp-line">Starting XI</p>
-                              <div className="lineup-list">
-                                {group.starters.length ? (
-                                  group.starters.map((player) => (
-                                    <div className="lineup-item" key={`${group.teamCode}-${player.name}`}>
-                                      <strong>{player.name}</strong>
-                                      <span>
-                                        {player.jersey ? `#${player.jersey}` : "No."} {player.position}
-                                      </span>
-                                    </div>
-                                  ))
-                                ) : (
-                                  <p className="support-copy">Starting lineup not published yet.</p>
-                                )}
-                              </div>
-                              <p className="timestamp-line">Bench</p>
-                              <div className="lineup-list">
-                                {group.substitutes.slice(0, 8).map((player) => (
-                                  <div className="lineup-item" key={`${group.teamCode}-sub-${player.name}`}>
-                                    <strong>{player.name}</strong>
-                                    <span>
-                                      {player.jersey ? `#${player.jersey}` : "No."} {player.position}
-                                    </span>
-                                  </div>
-                                ))}
-                              </div>
-                            </article>
-                          ))
-                        ) : (
-                          <p className="support-copy">
-                            The feed has not exposed lineup data for this match yet.
-                          </p>
-                        )}
-                      </div>
-                    </section>
-
-                    <section className="feature-card">
-                      <strong>Team stats and broadcast</strong>
-                      <div className="lineup-grid">
-                        {detail?.teamStats?.length ? (
-                          detail.teamStats.map((group) => (
-                            <article className="lineup-card" key={`stat-${group.teamCode}`}>
-                              <h3>{group.teamName || group.teamCode}</h3>
+                      return (
+                        <>
+                          {matchEvents.length ? (
+                            <section className="feature-card">
+                              <strong>Match events</strong>
                               <div className="match-detail-list">
-                                {group.statistics.map((item) => (
-                                  <div className="match-detail-item" key={`${group.teamCode}-${item.label}`}>
-                                    <span>{item.label}</span>
-                                    <strong>{item.value}</strong>
+                                {matchEvents.slice(0, 14).map((item) => (
+                                  <div className="match-detail-item" key={`event-${item.id}`}>
+                                    <span>{item.timeLabel || item.teamCode || "Event"}</span>
+                                    <strong>{item.text}</strong>
                                   </div>
                                 ))}
                               </div>
-                            </article>
-                          ))
-                        ) : (
-                          <p className="support-copy">
-                            Team stat tables will populate here when the feed provides them.
-                          </p>
-                        )}
-                      </div>
-                      {detail?.broadcasts?.length ? (
-                        <p className="support-copy">
-                          Broadcasts: {detail.broadcasts.join(", ")}
-                        </p>
-                      ) : null}
-                    </section>
+                            </section>
+                          ) : null}
+
+                          {detail?.lineups?.length ? (
+                            <section className="feature-card">
+                              <strong>Lineups</strong>
+                              <div className="lineup-grid">
+                                {detail.lineups.map((group) => (
+                                  <article className="lineup-card" key={group.teamCode}>
+                                    <h3>{group.teamName || group.teamCode}</h3>
+                                    <p className="timestamp-line">Starting XI</p>
+                                    <div className="lineup-list">
+                                      {group.starters.map((player) => (
+                                        <div className="lineup-item" key={`${group.teamCode}-${player.name}`}>
+                                          <strong>{player.name}</strong>
+                                          <span>
+                                            {player.jersey ? `#${player.jersey}` : "No."} {player.position}
+                                          </span>
+                                        </div>
+                                      ))}
+                                    </div>
+                                  </article>
+                                ))}
+                              </div>
+                            </section>
+                          ) : null}
+
+                          {detail?.teamStats?.length || detail?.broadcasts?.length ? (
+                            <section className="feature-card">
+                              <strong>Team stats</strong>
+                              <div className="lineup-grid">
+                                {detail?.teamStats?.map((group) => (
+                                  <article className="lineup-card" key={`stat-${group.teamCode}`}>
+                                    <h3>{group.teamName || group.teamCode}</h3>
+                                    <div className="match-detail-list">
+                                      {group.statistics.map((item) => (
+                                        <div className="match-detail-item" key={`${group.teamCode}-${item.label}`}>
+                                          <span>{item.label}</span>
+                                          <strong>{item.value}</strong>
+                                        </div>
+                                      ))}
+                                    </div>
+                                  </article>
+                                ))}
+                              </div>
+                              {detail?.broadcasts?.length ? (
+                                <p className="support-copy">Broadcasts: {detail.broadcasts.join(", ")}</p>
+                              ) : null}
+                            </section>
+                          ) : null}
+                        </>
+                      );
+                    })()}
                   </>
                 );
               })()}
