@@ -88,9 +88,11 @@ export function ClubHeader() {
         <nav className="club-nav">
           <Link href="/">Home</Link>
           {ready && currentUser ? <Link href="/polls/today">Polls</Link> : null}
+          {ready && currentUser ? <Link href="/live">Live Scorecard</Link> : null}
+          {ready && currentUser ? <Link href="/clubhouse">Club Room</Link> : null}
           {ready && currentUser ? <Link href="/setup">Profile</Link> : null}
           {ready && currentUser ? <Link href="/settlements">Settlements</Link> : null}
-          {ready && session?.role === "admin" ? <Link href="/admin">Admin</Link> : null}
+          {ready && currentUser?.role === "admin" ? <Link href="/admin">Admin</Link> : null}
           {!currentUser ? <Link href="/admin">Admin</Link> : null}
         </nav>
 

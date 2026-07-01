@@ -57,7 +57,9 @@ function normalizeState(state: AppState) {
       FIFA: state.carryBalances?.FIFA ?? 0,
       WT20: state.carryBalances?.WT20 ?? 0
     },
-    appNotifications: state.appNotifications ?? []
+    appNotifications: state.appNotifications ?? [],
+    chatMessages: state.chatMessages ?? [],
+    announcements: state.announcements ?? []
   };
 }
 

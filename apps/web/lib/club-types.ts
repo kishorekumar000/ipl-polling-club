@@ -200,7 +200,28 @@ export type AppNotification = {
   kind: AppNotificationKind;
   tournamentCode?: TournamentCode;
   url?: string;
- };
+};
+
+export type ClubChatMessage = {
+  id: string;
+  userId: string;
+  userName: string;
+  role: UserRole;
+  adminLevel?: AdminLevel;
+  tournamentCode: TournamentCode;
+  body: string;
+  createdAt: string;
+};
+
+export type ClubAnnouncement = {
+  id: string;
+  authorId: string;
+  authorName: string;
+  tournamentCode: TournamentCode;
+  title: string;
+  body: string;
+  createdAt: string;
+};
 
 export type AppState = {
   users: ClubUser[];
@@ -210,6 +231,8 @@ export type AppState = {
   carryBalances: Record<TournamentCode, number>;
   auditTrail: AuditEvent[];
   appNotifications: AppNotification[];
+  chatMessages: ClubChatMessage[];
+  announcements: ClubAnnouncement[];
 };
 
 export type Session = {

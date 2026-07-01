@@ -893,7 +893,9 @@ export function createEmptyState(): AppState {
       WT20: 0
     },
     auditTrail: [],
-    appNotifications: []
+    appNotifications: [],
+    chatMessages: [],
+    announcements: []
   };
 }
 

@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   getCarryBalance,
   getDisplayTeam,
@@ -17,7 +17,6 @@ import {
 } from "../../../lib/club-types";
 import {
   formatClock,
-  getCountdownData,
   getFinalTeams,
   getMatchPhase,
   getVoteForUser,
@@ -27,75 +26,30 @@ import { useClubStore } from "../../../lib/club-state";
 import { useDailyMatches } from "../../../lib/use-daily-matches";
 import { TeamBrandBadge } from "../../components/team-brand-badge";
 
-function hasScore(value?: number): value is number {
-  return typeof value === "number" && Number.isFinite(value);
-}
-
-function getScoreboardCopy(match: MatchRecord) {
-  const liveState = match.liveState ?? "scheduled";
-  const scoreLabel =
-    hasScore(match.homeScore) && hasScore(match.awayScore)
-      ? `${match.homeScore} - ${match.awayScore}`
-      : "vs";
-  const detail =
-    match.statusDetail ??
-    (liveState === "completed"
-      ? "Match completed"
-      : liveState === "live"
-        ? "Live on the pitch"
-        : liveState === "halftime"
-          ? "Break in play"
-          : `${formatClock(match.startsAt)} kickoff`);
-  const subDetail = [match.clockLabel, match.periodLabel].filter(Boolean).join(" • ");
-
-  return {
-    liveState,
-    detail,
-    scoreLabel,
-    subDetail,
-    statusLabel:
-      match.statusLabel ??
-      (liveState === "completed"
-        ? "Full time"
-        : liveState === "live"
-          ? "Live"
-          : liveState === "halftime"
-            ? "Half-time"
-            : "Scheduled")
-  };
-}
-
 function MatchPollCard({
   match,
   currentUserId,
   favoriteTeamCode,
   onVote,
-  votes,
-  users,
-  settlement
+  votes
 }: {
   match: MatchRecord;
   currentUserId: string;
   favoriteTeamCode?: TeamCode;
   onVote: (matchId: string, teamCode: TeamCode) => void;
   votes: VoteRecord[];
-  users: ClubUser[];
-  settlement?: SettlementRecord;
 }) {
   const [now, setNow] = useState(new Date());
 
   useEffect(() => {
-    const interval = window.setInterval(() => setNow(new Date()), 1000);
+    const interval = window.setInterval(() => setNow(new Date()), 30000);
     return () => window.clearInterval(interval);
   }, []);
 
-  const favoriteTeam = favoriteTeamCode ? getTeam(favoriteTeamCode) : undefined;
-  const countdown = getCountdownData(match, now);
   const phase = getMatchPhase(match, now);
   const currentVote = getVoteForUser(votes, currentUserId, match.id);
-  const finalTeams = getFinalTeams(match, votes, users);
+  const favoriteTeam = favoriteTeamCode ? getTeam(favoriteTeamCode) : undefined;
   const showIplFavoriteTheme = match.tournamentCode === "IPL" && favoriteTeam;
-  const scoreboard = getScoreboardCopy(match);
 
   const homeTeam = getDisplayTeam(match.homeTeamCode, {
     tournamentCode: match.tournamentCode,
@@ -118,11 +72,10 @@ function MatchPollCard({
 
   const isFifa = match.tournamentCode === "FIFA";
   const isWt20 = match.tournamentCode === "WT20";
-  const cardClassName = `poll-card ${isFifa ? "poll-card-fifa" : ""} ${isWt20 ? "poll-card-wt20" : ""}`;
 
   return (
     <article
-      className={cardClassName}
+      className={`poll-card ${isFifa ? "poll-card-fifa" : ""} ${isWt20 ? "poll-card-wt20" : ""}`}
       style={{
         background: showIplFavoriteTheme
           ? `linear-gradient(135deg, ${showIplFavoriteTheme.primary}22, ${showIplFavoriteTheme.secondary}11), rgba(7, 17, 31, 0.92)`
@@ -146,26 +99,28 @@ function MatchPollCard({
       ) : null}
 
       <div className="match-topline">
-        <span className={`status-pill status-${phase}`}>{countdown.label}</span>
-        <span className="countdown-value">{countdown.value}</span>
+        <span className={`status-pill status-${phase}`}>
+          {phase === "open" ? "Voting open" : "Queued next"}
+        </span>
+        <span className="countdown-value">Deadline {formatClock(match.pollLockAt)}</span>
       </div>
 
       <div className="match-heading">
         <div>
           <p className="eyebrow">
             {isFifa
-              ? "Today&apos;s football fixture"
+              ? "Football poll"
               : isWt20
-                ? "Today&apos;s women&apos;s cricket fixture"
-                : "Today&apos;s fixture"}
+                ? "Women&apos;s cricket poll"
+                : "Cricket poll"}
           </p>
           <h2>{match.title}</h2>
           <p className="support-copy">{match.subtitle}</p>
         </div>
         <div className="match-timing-card">
           <div>
-            <span>Poll opens</span>
-            <strong>{formatClock(match.pollOpenAt)}</strong>
+            <span>Kickoff / start</span>
+            <strong>{formatClock(match.startsAt)}</strong>
           </div>
           <div>
             <span>Vote lock</span>
@@ -174,67 +129,9 @@ function MatchPollCard({
         </div>
       </div>
 
-      <section className="live-scoreboard">
-        <div className={`live-team-card ${match.homeTeamWinner ? "winner" : ""}`}>
-          <div
-            className="live-team-swatch"
-            style={{
-              background: `linear-gradient(160deg, ${homeTeam.primary}, ${homeTeam.secondary})`
-            }}
-          >
-            {homeTeam.logoPath ? (
-              <img alt={`${homeTeam.name} crest`} className="live-team-logo" src={homeTeam.logoPath} />
-            ) : (
-              <span>{homeTeam.symbol}</span>
-            )}
-          </div>
-          <div className="live-team-meta">
-            <strong>{homeTeam.shortName}</strong>
-            <span>{homeTeam.name}</span>
-          </div>
-          <div className="live-team-score">
-            {hasScore(match.homeScore) ? String(match.homeScore) : "-"}
-          </div>
-        </div>
-
-        <div className="live-score-center">
-          <span className={`live-state-pill state-${scoreboard.liveState}`}>
-            {scoreboard.statusLabel}
-          </span>
-          <strong className="live-scoreline">{scoreboard.scoreLabel}</strong>
-          <span className="live-score-detail">{scoreboard.detail}</span>
-          {scoreboard.subDetail ? (
-            <span className="live-score-subdetail">{scoreboard.subDetail}</span>
-          ) : null}
-        </div>
-
-        <div className={`live-team-card ${match.awayTeamWinner ? "winner" : ""}`}>
-          <div
-            className="live-team-swatch"
-            style={{
-              background: `linear-gradient(160deg, ${awayTeam.primary}, ${awayTeam.secondary})`
-            }}
-          >
-            {awayTeam.logoPath ? (
-              <img alt={`${awayTeam.name} crest`} className="live-team-logo" src={awayTeam.logoPath} />
-            ) : (
-              <span>{awayTeam.symbol}</span>
-            )}
-          </div>
-          <div className="live-team-meta">
-            <strong>{awayTeam.shortName}</strong>
-            <span>{awayTeam.name}</span>
-          </div>
-          <div className="live-team-score">
-            {hasScore(match.awayScore) ? String(match.awayScore) : "-"}
-          </div>
-        </div>
-      </section>
-
       <div className="poll-grid">
         {[homeTeam, awayTeam].map((team) => {
           const isSelected = currentVote?.teamCode === team.code;
-          const disabled = phase !== "open";
 
           return (
             <button
@@ -246,60 +143,95 @@ function MatchPollCard({
                 background: `linear-gradient(160deg, ${team.primary}33, ${team.secondary}11)`
               }}
               type="button"
-              disabled={disabled}
+              disabled={phase !== "open"}
             >
               <span className="team-symbol">{team.symbol}</span>
               <span className="team-code">{team.shortName}</span>
               <strong>{team.nickname}</strong>
               <span>{team.name}</span>
-              {isSelected ? (
-                <span className="selection-tag">Your current pick</span>
-              ) : null}
+              {isSelected ? <span className="selection-tag">Your current pick</span> : null}
             </button>
           );
         })}
       </div>
 
-      {currentVote ? (
-        <p className="support-copy">
-          You last backed {currentVote.teamCode} at {formatClock(currentVote.updatedAt)}.
-          {phase === "open"
-            ? " You can switch sides until the deadline, or tap the same team again to remove your vote."
-            : " Final teams are now locked for everyone."}
-        </p>
-      ) : (
-        <p className="support-copy">
-          {isFifa
-            ? "Back your side before kickoff. Multiple football fixtures can stay open at the same time."
-            : isWt20
-              ? "Back your side before the first ball. Every live women&apos;s match keeps its own open window."
-              : "Make your call before the voting window closes."}
-        </p>
-      )}
+      <p className="support-copy">
+        {currentVote
+          ? `You backed ${currentVote.teamCode}. Tap the same team again to remove it, or switch sides before the deadline.`
+          : phase === "open"
+            ? "Choose one side before the deadline hits."
+            : "This match is next in line. Voting opens automatically three hours before the start time."}
+      </p>
+    </article>
+  );
+}
 
-      {phase === "locked" ? (
-        <section className="final-team-board">
-          <div className="final-team-column">
-            <h3>{homeTeam.shortName}</h3>
-            <p className="support-copy">
-              {finalTeams[match.homeTeamCode].length > 0
-                ? finalTeams[match.homeTeamCode].join(", ")
-                : "No locked votes"}
-            </p>
-          </div>
-          <div className="final-team-column">
-            <h3>{awayTeam.shortName}</h3>
-            <p className="support-copy">
-              {finalTeams[match.awayTeamCode].length > 0
-                ? finalTeams[match.awayTeamCode].join(", ")
-                : "No locked votes"}
-            </p>
-          </div>
-        </section>
-      ) : null}
+function FinalTeamsCard({
+  match,
+  votes,
+  users,
+  settlement
+}: {
+  match: MatchRecord;
+  votes: VoteRecord[];
+  users: ClubUser[];
+  settlement?: SettlementRecord;
+}) {
+  const finalTeams = getFinalTeams(match, votes, users);
+  const homeTeam = getDisplayTeam(match.homeTeamCode, {
+    tournamentCode: match.tournamentCode,
+    name: match.homeTeamName,
+    shortName: match.homeTeamShortName,
+    logoPath: match.homeTeamLogoPath,
+    primary: match.homeTeamPrimary,
+    secondary: match.homeTeamSecondary,
+    accent: match.homeTeamAccent
+  });
+  const awayTeam = getDisplayTeam(match.awayTeamCode, {
+    tournamentCode: match.tournamentCode,
+    name: match.awayTeamName,
+    shortName: match.awayTeamShortName,
+    logoPath: match.awayTeamLogoPath,
+    primary: match.awayTeamPrimary,
+    secondary: match.awayTeamSecondary,
+    accent: match.awayTeamAccent
+  });
+
+  return (
+    <article className="panel-card final-sheet-card">
+      <div className="section-heading">
+        <div>
+          <p className="eyebrow">Final team sheet</p>
+          <h2>{match.title}</h2>
+        </div>
+        <span className="status-pill status-locked">Deadline reached</span>
+      </div>
+
+      <div className="final-team-board">
+        <div className="final-team-column">
+          <h3>{homeTeam.shortName}</h3>
+          <p className="support-copy">
+            {finalTeams[match.homeTeamCode].length
+              ? finalTeams[match.homeTeamCode].join(", ")
+              : "No locked votes"}
+          </p>
+        </div>
+        <div className="final-team-column">
+          <h3>{awayTeam.shortName}</h3>
+          <p className="support-copy">
+            {finalTeams[match.awayTeamCode].length
+              ? finalTeams[match.awayTeamCode].join(", ")
+              : "No locked votes"}
+          </p>
+        </div>
+      </div>
+
+      <p className="support-copy">
+        This poll is closed now. The live scorecard stays in the separate live section.
+      </p>
 
       {settlement ? (
-        <section className="settlement-strip">
+        <div className="settlement-strip">
           <div>
             <span>Winner</span>
             <strong>{settlement.winnerTeamCode}</strong>
@@ -317,27 +249,21 @@ function MatchPollCard({
               Open settlement board
             </Link>
           </div>
-        </section>
+        </div>
       ) : null}
     </article>
   );
 }
 
 export default function PollsTodayPage() {
-  const {
-    ready,
-    session,
-    state,
-    currentTournament,
-    updateState
-  } = useClubStore();
+  const { ready, session, state, currentTournament, updateState } = useClubStore();
   const { todayMatches, loading, error } = useDailyMatches(currentTournament);
   const [now, setNow] = useState(new Date());
   const currentUser = state.users.find((user) => user.id === session?.userId);
   const tournament = getTournament(currentTournament);
 
   useEffect(() => {
-    const intervalId = window.setInterval(() => setNow(new Date()), 1000);
+    const intervalId = window.setInterval(() => setNow(new Date()), 30000);
     return () => window.clearInterval(intervalId);
   }, []);
 
@@ -347,7 +273,7 @@ export default function PollsTodayPage() {
     }
 
     updateState((current) => {
-      const now = new Date().toISOString();
+      const createdAt = new Date().toISOString();
       const match = current.matches.find((item) => item.id === matchId);
 
       if (!match || getMatchPhase(match, new Date()) !== "open") {
@@ -368,7 +294,7 @@ export default function PollsTodayPage() {
           userId: currentUser.id,
           matchId,
           teamCode,
-          updatedAt: now
+          updatedAt: createdAt
         });
       }
 
@@ -383,13 +309,29 @@ export default function PollsTodayPage() {
             detail: isRemovingVote
               ? `Removed the vote in ${match.title}.`
               : `Backed ${teamCode} in ${match.title}.`,
-            createdAt: now
+            createdAt
           },
           ...current.auditTrail
         ].slice(0, 20)
       };
     });
   };
+
+  const sortedMatches = useMemo(
+    () =>
+      [...todayMatches].sort(
+        (left, right) =>
+          new Date(left.startsAt).getTime() - new Date(right.startsAt).getTime()
+      ),
+    [todayMatches]
+  );
+
+  const freshPollMatches = sortedMatches
+    .filter((match) => getMatchPhase(match, now) !== "locked")
+    .slice(0, 3);
+  const finalTeamMatches = sortedMatches.filter(
+    (match) => getMatchPhase(match, now) === "locked"
+  );
 
   if (!ready) {
     return <main className="page-shell">Loading today&apos;s polling floor...</main>;
@@ -431,12 +373,6 @@ export default function PollsTodayPage() {
   const heroFavoriteTeam = currentTournament === "IPL" ? favoriteTeam : undefined;
   const isFifaTournament = currentTournament === "FIFA";
   const isWt20Tournament = currentTournament === "WT20";
-  const activeMatches = todayMatches.filter(
-    (match) => getMatchPhase(match, now) !== "locked"
-  );
-  const completedMatches = todayMatches.filter(
-    (match) => getMatchPhase(match, now) === "locked"
-  );
 
   return (
     <main className="page-shell">
@@ -454,26 +390,18 @@ export default function PollsTodayPage() {
       >
         <div className="hero-with-brand">
           <div>
-            <p className="eyebrow">
-              {isFifaTournament
-                ? "Football match centre"
-                : isWt20Tournament
-                  ? "Women&apos;s cricket match centre"
-                  : "Today&apos;s poll room"}
-            </p>
+            <p className="eyebrow">Today&apos;s poll room</p>
             <h1>
               {isFifaTournament
-                ? "Every football fixture stays in its own live voting window."
+                ? "Only the next football polls stay in front."
                 : isWt20Tournament
-                  ? "Every women&apos;s T20 match stays in its own live voting window."
-                  : "Real daily matches. Real vote windows."}
+                  ? "Only the next women&apos;s match polls stay in front."
+                  : "Only the next cricket polls stay in front."}
             </h1>
             <p className="support-copy">
-              {isFifaTournament
-                ? "Football mode runs with its own fixture list, kickoff-based timers, and separate settlements. Cricket branding stays out of this view."
-                : isWt20Tournament
-                  ? "Women&apos;s T20 mode runs on its own published fixture list, opens exactly three hours before each match, and keeps settlements fully separate from IPL and FIFA."
-                  : `Your favorite team theme follows you across the cricket experience, while ${tournament?.shortName ?? "the active tournament"} stays isolated with its own voting window and settlement flow.`}
+              This room now shows only the next three live poll opportunities.
+              Once a match reaches its deadline, the vote card leaves the queue
+              and its final team sheet appears below.
             </p>
           </div>
           {heroFavoriteTeam ? <TeamBrandBadge team={heroFavoriteTeam} /> : null}
@@ -488,14 +416,8 @@ export default function PollsTodayPage() {
             <strong>{currentUser.publicId}</strong>
           </div>
           <div className="profile-chip">
-            <span>{isFifaTournament || isWt20Tournament ? "Mode" : "Favorite team"}</span>
-            <strong>
-              {isFifaTournament
-                ? "Football theme active"
-                : isWt20Tournament
-                  ? "Women&apos;s cricket theme active"
-                  : favoriteTeam?.name}
-            </strong>
+            <span>Active tournament</span>
+            <strong>{tournament?.shortName}</strong>
           </div>
           <div className="profile-chip">
             <span>{tournament?.shortName} carry</span>
@@ -508,39 +430,44 @@ export default function PollsTodayPage() {
       {error ? <p className="warning-text">{error}</p> : null}
 
       <section className="stack-list">
-        {activeMatches.map((match) => {
-          const matchVotes = getVotesForMatch(state.votes, match.id);
-          const settlement = state.settlements.find(
-            (item) => item.matchId === match.id
-          );
-
-          return (
+        {freshPollMatches.length ? (
+          freshPollMatches.map((match) => (
             <MatchPollCard
               currentUserId={currentUser.id}
               favoriteTeamCode={currentUser.favoriteTeamCode}
               key={match.id}
               match={match}
               onVote={handleVote}
-              settlement={settlement}
-              users={state.users}
-              votes={matchVotes}
+              votes={getVotesForMatch(state.votes, match.id)}
             />
-          );
-        })}
-        {completedMatches.map((match) => (
-          <section className="panel-card" key={`completed-${match.id}`}>
-            <p className="eyebrow">Match completed</p>
-            <h2>{match.title}</h2>
-            <p className="support-copy">
-              This match was completed. Only fresh live polls stay in this room now.
-            </p>
-          </section>
-        ))}
-        {!loading && activeMatches.length === 0 && completedMatches.length === 0 ? (
+          ))
+        ) : !loading ? (
           <section className="panel-card">
-            <p className="eyebrow">No fixture today</p>
-            <h2>There is no {tournament?.shortName ?? "active"} match synced for the current date.</h2>
+            <p className="eyebrow">No fresh poll in queue</p>
+            <h2>There is no open or upcoming {tournament?.shortName} poll in the current slate.</h2>
           </section>
+        ) : null}
+      </section>
+
+      <section className="stack-list">
+        {finalTeamMatches.length ? (
+          <>
+            <div className="section-heading">
+              <div>
+                <p className="eyebrow">Deadline reached</p>
+                <h2>Final locked team sheets</h2>
+              </div>
+            </div>
+            {finalTeamMatches.map((match) => (
+              <FinalTeamsCard
+                key={`final-${match.id}`}
+                match={match}
+                settlement={state.settlements.find((item) => item.matchId === match.id)}
+                users={state.users}
+                votes={getVotesForMatch(state.votes, match.id)}
+              />
+            ))}
+          </>
         ) : null}
       </section>
     </main>
